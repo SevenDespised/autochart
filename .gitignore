@@ -1,0 +1,11 @@
+# dir
+/data
+/.vscode
+/features
+/*models
+*__pycache__*
+
+# file
+*.txt
+*.log*
+*.json
