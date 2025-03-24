@@ -20,11 +20,11 @@ paths = {'train': 'features/nl2chart_feature_train.csv',
         'test': 'features/nl2chart_feature_test.csv',
         #'train': 'features/feature_train.csv',
         #'test': 'features/feature_test.csv',
-        'model_path': 'models/',
-        #'default_model': 'models/model.txt',
-        'default_model': 'models/model_nl2chart.txt',
+        'model_path': 'chart_classifi_models/',
+        #'default_model': 'chart_classifi_models/model.txt',
+        'default_model': 'chart_classifi_models/model_nl2chart.txt',
         #'log': 'src/log/train.log'}
-        'log': 'src/log/batch_test_param.log'}
+        'log': 'chart_classfication/log/batch_test_param.log'}
 #param = {'num_leaves':31, 'num_trees':100 , 'objective':'multiclass', 'num_class': 6, 'metric':'auc_mu'}
 param = {
     'task': 'train',

@@ -3,12 +3,15 @@ import json
 from openai import OpenAI
 from typing import Dict
 
+BASE_DIR = ".."
+CONF_DIR = "config/test_config.json"
+
 class OpenAIClient:
     def __init__(self, config: Dict):
         self.client = OpenAI(
             api_key=config.get("api_key", ""),
-            base_url=config.get("base_url", "https://api.hunyuan.cloud.tencent.com/v1").rstrip('/') + '/',
-            timeout=config.get("timeout", 30)
+            base_url=config.get("base_url", "https://api.hunyuan.cloud.tencent.com/v1"),
+            #timeout=config.get("timeout", 30)
         )
         self.model_name = config.get("model_name", "hunyuan-lite")
         self.temperature = config.get("temperature", 0.7)
@@ -20,9 +23,8 @@ class OpenAIClient:
     def generate(self, prompt: str, **kwargs) -> Dict:
         """执行模型调用，支持动态参数覆盖配置
         
-        参数说明：
-        - prompt: 输入提示词
-        - kwargs: 可覆盖配置参数（temperature/max_tokens等）
+        :param prompt: 输入提示词
+        :param kwargs: 可覆盖配置参数（temperature/max_tokens等）
         """
         try:
             params = {
@@ -55,7 +57,7 @@ class OpenAIClient:
 
 if __name__ == "__main__":
     # 测试配置（优先从json文件读取）
-    config_path = "llm_pipe/test_config.json"
+    config_path = os.path.join(BASE_DIR, CONF_DIR)
     
     if os.path.exists(config_path):
         with open(config_path, 'r', encoding='utf-8') as file:
