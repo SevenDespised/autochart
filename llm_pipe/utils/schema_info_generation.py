@@ -25,7 +25,7 @@ def get_csv_schema(file_paths: List[str], delimiter: str = ',', encoding: str = 
             )
             
             schema = {
-                "filename": os.path.basename(file_path),
+                "tablename": os.path.basename(file_path),
                 "columns": []
             }
 
@@ -50,8 +50,6 @@ def get_csv_schema(file_paths: List[str], delimiter: str = ',', encoding: str = 
                             dtype = 'integer'
                     except:
                         dtype = 'string'
-
-                # 保持示例值原样（不修改时间格式）
                 example = str(first_value)  # 直接转换为字符串
                 
                 schema["columns"].append({
@@ -64,9 +62,33 @@ def get_csv_schema(file_paths: List[str], delimiter: str = ',', encoding: str = 
         
         except Exception as e:
             print(f"Error processing {file_path}: {str(e)}")
-    
+
+    json_str = json.dumps(schemas, indent=0, ensure_ascii=False, separators=(',', ':'))
+    result = ""
+    i = 0
+    while i < len(json_str):
+        if json_str[i:i + 10] == '"columns":':
+            result += json_str[i:i + 10]
+            i += 10
+            open_brackets = 0
+            start = i
+            while i < len(json_str):
+                if json_str[i] == '[':
+                    open_brackets += 1
+                elif json_str[i] == ']':
+                    open_brackets -= 1
+                    if open_brackets == 0:
+                        # 去除换行符
+                        part = json_str[start:i].replace('\n', '')
+                        result += part + ']'
+                        i += 1
+                        break
+                i += 1
+        else:
+            result += json_str[i]
+            i += 1
     # 生成格式化JSON字符串
-    return json.dumps(schemas, indent=2, ensure_ascii=False)
+    return result
 
 
 # 使用示例

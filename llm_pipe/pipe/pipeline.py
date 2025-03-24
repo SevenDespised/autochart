@@ -140,7 +140,7 @@ class PipelineProcessor:
         return parse_response(response = response)
     def _call_model(self, prompt):
         return self.model_client.generate(prompt)
-    def execute_single_stage(self, stage_index: int, initial_input: Dict) -> Dict:
+    def execute_single_stage(self, stage_index: int, initial_input: Dict, call_model: bool = True) -> Dict:
         """
         单独执行processing_chain中的一个模块
         :param stage_index: 要执行的阶段索引

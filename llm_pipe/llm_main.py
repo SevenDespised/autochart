@@ -41,15 +41,15 @@ if __name__ == "__main__":
         for i, query in enumerate(queries):
             data["x_data"]["query_idx"] = i
             pipe = PipelineProcessor(config)
-            report = pipe.execute_single_stage(0, data["x_data"])
-            #report = pipe.execute_pipeline(data["x_data"])
-            print(report)
+            processor = pipe.processing_chain[0]['processor']
+            #print(processor.generate_prompt(data["x_data"]))
+            #report = pipe.execute_single_stage(0, data["x_data"])
+            report = pipe.execute_pipeline(data["x_data"])
+            #print(report)
             try:
                 print(f"表名称：{report["output_data"]["table_names"]}")
-            except:
-                print("读取错误")
+            except Exception as e:
+                print("读取错误", e)
             print("***********")
         num += 1
-
-        
-    print("***********")
+    print("结束")
