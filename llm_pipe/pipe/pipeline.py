@@ -69,7 +69,7 @@ class PipelineProcessor:
         """执行动态处理流程"""
         current_output = initial_input
         execution_report = []
-        stage_output = {"input_data": initial_input, "history": self.history}
+        stage_output = {"initial_input": initial_input, "history": self.history}
         # 遍历处理链中的每个阶段
         for idx, stage in enumerate(self.processing_chain):
             stage_name = stage['name']
@@ -119,10 +119,11 @@ class PipelineProcessor:
 
         # 返回执行报告和最终输出
         return {
-            "success": all(s['status'] == 'success' for s in execution_report),
+            "status": all(s['status'] == 'success' for s in execution_report),
             "execution_report": execution_report,
             "output_data": current_output,
-            "stage_output": filtered_stage_output
+            "stage_output": filtered_stage_output,
+            "model_name": self.model_client.model_name
         }
 
     # 将输出有限制的添加进历史记录

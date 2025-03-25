@@ -3,7 +3,7 @@ import os
 import json
 from typing import List, Dict
 
-def get_csv_schema(file_paths: List[str], delimiter: str = ',', encoding: str = 'utf-8') -> str:
+def get_csv_schema(file_paths: List[str], tables: List[str] = [], delimiter: str = ',', encoding: str = 'utf-8') -> str:
     """
     提取多个CSV文件的元数据信息并返回格式化JSON字符串
     """
@@ -28,7 +28,10 @@ def get_csv_schema(file_paths: List[str], delimiter: str = ',', encoding: str = 
                 "tablename": os.path.basename(file_path),
                 "columns": []
             }
-
+            # 判断schema中的tablename是不是在已选择的tables里
+            name, _ = os.path.splitext(schema["tablename"])
+            if tables and (schema["tablename"] not in tables and name not in tables):
+                continue
             for col in df.columns:
                 series = df[col].dropna()
                 if series.empty:

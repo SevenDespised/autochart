@@ -16,19 +16,22 @@ class Processor:
         pass
     def generate_prompt(self, input_data, stage_output):
         """
-        处理初始输入，生成表选择提示词
+        处理表选择输出，生成列选择提示词
         """
+        initial_input = stage_output["initial_input"]
+        
         # 获取输入数据中的查询文本
-        query = input_data["nl_queries"][0]
+        query = initial_input["nl_queries"][0]
         masked_query = mask_chart_types(query)
-        # 获取schema信息
-        db_id = input_data["db_id"]
+        # 获取上阶段选择的表的schema信息
+        db_id = initial_input["db_id"]
+        table_names = input_data["table_names"]
         db_path = os.path.join(BASE_DIR, DB_DIR)
         tables_path = get_db_tables_path(db_path, "db_tables.json", db_id)
-        schema_info = get_csv_schema(tables_path)
+        schema_info = get_csv_schema(tables_path, table_names)
         # 优化提示词
         prompt_optimizer = PromptOptimizer(masked_query, 'en')
-        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "table_selection.txt"), 
+        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "column_selection.txt"), 
                                     "QUESTION", 
                                     "optimized_prompt",
                                     DATABASE_SCHEMA = schema_info,
