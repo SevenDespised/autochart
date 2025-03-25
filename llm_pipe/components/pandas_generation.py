@@ -34,7 +34,7 @@ class Processor:
         cols = {k: v for k, v in input_data.items() if k != "chain_of_thought_reasoning"}
         # 优化提示词
         prompt_optimizer = PromptOptimizer(masked_query, 'en')
-        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "pandas_generation.txt"), 
+        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "pandas_generation.tpl"), 
                                     "QUESTION", 
                                     "optimized_prompt",
                                     DATABASE_SCHEMA = schema_info,

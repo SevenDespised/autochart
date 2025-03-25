@@ -31,7 +31,7 @@ class Processor:
         schema_info = get_csv_schema(tables_path, table_names)
         # 优化提示词
         prompt_optimizer = PromptOptimizer(masked_query, 'en')
-        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "column_selection.txt"), 
+        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "column_selection.tpl"), 
                                     "QUESTION", 
                                     "optimized_prompt",
                                     DATABASE_SCHEMA = schema_info,
