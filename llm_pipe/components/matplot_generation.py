@@ -39,7 +39,7 @@ class Processor:
                                     DATAFRAME = data_string,
                                     COLUMNS = result.columns.tolist(),
                                     #CHART_TYPE = chart_types,
-                                    SAVE_PATH = os.path.join(BASE_DIR, TMP_OUTPUT_DIR, "data.csv"),
+                                    #SAVE_PATH = os.path.join(BASE_DIR, TMP_OUTPUT_DIR, "data.csv"),
                                     QUESTION = prompt_optimizer.prompt)
         
         return prompt_optimizer.optimized_prompt
@@ -50,7 +50,7 @@ class Processor:
         """
         # 执行生成的代码
         code_str = output_data["code"]
-        local_dict = {"result": self.result}
+        local_dict = {"result": self.result, "save_dir": os.path.join(BASE_DIR, TMP_OUTPUT_DIR)}
         exec(code_str, globals(), local_dict)
         # 保存plt图片
         local_dict["plt"].savefig(os.path.join(BASE_DIR, TMP_OUTPUT_DIR, "output.png"))

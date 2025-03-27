@@ -18,11 +18,9 @@ Code writing instructions:
 3. Automatically infer appropriate figure size.
 4. Add mandatory chart elements for readability, and set appropriate size for each element.
 5. If necessary, determine which data to encode on which axis based on column names and the question.
-6. Do not use plt.show(). Save the figure as a png-file in the figure saving directory. Use `os` module to process save path.
-7. File name should include time-stamp.
-
-Figure saving directory as follow:
-{SAVE_PATH}
+6. Do not use plt.show(). 
+7. Save the figure as a png-file in the figure saving directory. Use `os` module to prepend the directory to file name, and the `save_dir` variable is predefined and can be directly referenced.
+8. File name should include time-stamp.
 
 ###
 Question: 

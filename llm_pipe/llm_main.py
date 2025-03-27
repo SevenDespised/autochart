@@ -8,7 +8,7 @@ from utils.report_process import store_report
 
 BASE_DIR = ""
 DATA_DIR = "data/visEval_dataset/visEval.json"
-#CONF_DIR = "llm_pipe/config/hw_deepseek_v3.json"
+CONF_DIR = "llm_pipe/config/hw_deepseek_v3.json"
 CONF_DIR = "llm_pipe/config/config.json"
 REPORT_DIR = "llm_pipe/reports"
 if __name__ == "__main__":
@@ -28,13 +28,16 @@ if __name__ == "__main__":
     n = len(data)
     all_reports = []
     for data in data_loader:
-        if num > 1:
-            break
-
+        #if num > 5000:
+        #    break
+        if data["x_data"]["nl_queries"][0] != "A bar chart listing the number of faults for different description of skills required to fix them, and sort x axis in descending order.":
+            num += 1
+            continue
+        else:
+            print(f"已找到。第{num}个样本")
         pipe = PipelineProcessor(config)
         processor = pipe.processing_chain[1]['processor']
         #print(processor.generate_prompt(data["x_data"]))
-        #report = pipe.execute_single_stage(0, data["x_data"])
         report = pipe.execute_pipeline(data["x_data"])
         all_reports.append(report)
         #print(report)

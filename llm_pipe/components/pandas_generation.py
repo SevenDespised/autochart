@@ -14,13 +14,13 @@ class Processor:
         """
         初始化 Processor 类
         """
-        pass
+        self.db_id = None
     def generate_prompt(self, input_data, data: StageExecutionData):
         """
         处理列选择输出，生成pandas代码生成提示词
         """
         initial_input = data.get_initial_input()
-        
+        self.db_id = initial_input["db_id"]
         # 获取输入数据中的查询文本
         query = initial_input["nl_queries"][0]
         masked_query = mask_chart_types(query)
@@ -34,7 +34,7 @@ class Processor:
                                     "QUESTION", 
                                     "optimized_prompt",
                                     DATABASE_SCHEMA = schema_info,
-                                    TABLE_PATH = os.path.join(BASE_DIR, DB_DIR, initial_input["db_id"]),
+                                    #TABLE_PATH = os.path.join(BASE_DIR, DB_DIR, initial_input["db_id"]),
                                     HINT = "NONE HINT",
                                     COLS = cols,
                                     QUESTION = prompt_optimizer.prompt)
@@ -47,7 +47,7 @@ class Processor:
         """
         # 执行code_str,接收result中的dataframe
         code_str = output_data["pandas_code"]
-        local_dict = {}
+        local_dict = {"table_dir": os.path.join(BASE_DIR, DB_DIR, self.db_id)}
         exec(code_str, globals(), local_dict)
         result = local_dict["result"]
         # 暂存中间文件
