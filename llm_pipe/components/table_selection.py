@@ -2,6 +2,7 @@ import os
 from prompt_optimization.prompt_optimizer import PromptOptimizer
 from utils.data_preprocess import mask_chart_types, get_db_tables_path
 from utils.schema_info_generation import get_csv_schema
+from pipe.storage import StageExecutionData
 
 BASE_DIR = ""
 TEMPLATE_PATH = "llm_pipe/templates"
@@ -14,7 +15,7 @@ class Processor:
         初始化 Processor 类
         """
         pass
-    def generate_prompt(self, input_data, stage_output):
+    def generate_prompt(self, input_data, data: StageExecutionData):
         """
         处理初始输入，生成表选择提示词
         """

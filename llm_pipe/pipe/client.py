@@ -10,8 +10,8 @@ class OpenAIClient:
     def __init__(self, config: Dict):
         self.client = OpenAI(
             api_key=config.get("api_key", ""),
-            base_url=config.get("base_url", "https://api.hunyuan.cloud.tencent.com/v1"),
-            #timeout=config.get("timeout", 30)
+            base_url=config.get("base_url", "https://api.hunyuan.cloud.tencent.com/v1").rstrip('/') + '/',
+            timeout=config.get("timeout", 30)
         )
         self.model_name = config.get("model_name", "hunyuan-lite")
         self.temperature = config.get("temperature", 0.7)

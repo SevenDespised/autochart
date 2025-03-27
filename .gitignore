@@ -3,6 +3,8 @@
 /.vscode
 /features
 /*models
+/tmp_output
+
 *__pycache__*
 
 # file

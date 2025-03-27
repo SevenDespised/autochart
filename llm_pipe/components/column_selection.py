@@ -2,6 +2,7 @@ import os
 from prompt_optimization.prompt_optimizer import PromptOptimizer
 from utils.data_preprocess import mask_chart_types, get_db_tables_path
 from utils.schema_info_generation import get_csv_schema
+from pipe.storage import StageExecutionData
 
 BASE_DIR = ""
 TEMPLATE_PATH = "llm_pipe/templates"
@@ -13,12 +14,12 @@ class Processor:
         """
         初始化 Processor 类
         """
-        pass
-    def generate_prompt(self, input_data, stage_output):
+        self.store_variable = {}
+    def generate_prompt(self, input_data, data: StageExecutionData):
         """
         处理表选择输出，生成列选择提示词
         """
-        initial_input = stage_output["initial_input"]
+        initial_input = data.get_initial_input()
         
         # 获取输入数据中的查询文本
         query = initial_input["nl_queries"][0]
@@ -29,6 +30,7 @@ class Processor:
         db_path = os.path.join(BASE_DIR, DB_DIR)
         tables_path = get_db_tables_path(db_path, "db_tables.json", db_id)
         schema_info = get_csv_schema(tables_path, table_names)
+        self.store_variable["schema_info"] = schema_info
         # 优化提示词
         prompt_optimizer = PromptOptimizer(masked_query, 'en')
         prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "column_selection.tpl"), 
@@ -39,3 +41,6 @@ class Processor:
                                     QUESTION = prompt_optimizer.prompt)
         
         return prompt_optimizer.optimized_prompt
+    
+    def store_variable_in_pipeline(self):
+        return self.store_variable

@@ -41,7 +41,9 @@ if __name__ == "__main__":
         try:
             #print(f"阶段输入：{report["output_data"]}")
             print(f"最终输出：{report["output_data"]}")
-            print(f"状态：{report['status']}")
+            print(f"状态：{report['success']}")
+
+            
         except Exception as e:
             print("流水线错误", e)
         print("***********")

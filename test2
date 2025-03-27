@@ -1,0 +1,9 @@
+import pandas as pd
+
+code_str = "import pandas as pd\nimport os\n\n# Read the Faculty CSV file\nfaculty_df = pd.read_csv(os.path.join('data/visEval_dataset/databases\\\\activity_1', 'Faculty.csv'))\n\n# Read the Student CSV file\nstudent_df = pd.read_csv(os.path.join('data/visEval_dataset/databases\\\\activity_1', 'Student.csv'))\n\n# Merge the Faculty and Student dataframes on the Advisor column\nmerged_df = pd.merge(student_df, faculty_df, left_on='Advisor', right_on='FacID')\n\n# Group by Rank and count the number of students advised by each rank\nresult = merged_df.groupby('Rank').size().reset_index(name='NumberOfStudents')"
+t = {}
+result = pd.read_csv('feature_extraction/tmp_output/data.csv')
+code_str = "import os\nimport matplotlib.pyplot as plt\nimport pandas as pd\nfrom datetime import datetime\n\n# Assuming result is already defined\n# result = pd.read_csv('data.csv')\n\n# Set up the figure and axes\nfig, ax = plt.subplots()\n\n# Plot the data\nax.bar(result['Rank'], result['NumberOfStudents'])\n\n# Set the title, x-label, and y-label\nplt.title('Number of Students Advised by Faculty Rank')\nplt.xlabel('Faculty Rank')\nplt.ylabel('Number of Students')\n\n# Create a legend\nplt.legend(['Number of Students'])\n\n# Calculate the timestamp for the filename\ntimestamp = datetime.now().strftime('%Y%m%d%H%M%S')\n\n# Define the save path\nsave_path = os.path.join('feature_extraction', 'tmp_output', f'data_{timestamp}.png')\n\n# Save the figure\nplt.savefig(save_path)\n"
+exec(code_str, globals(), locals())
+result = locals()["result"]
+print(result)
