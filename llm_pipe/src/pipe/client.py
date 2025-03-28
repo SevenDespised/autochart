@@ -2,11 +2,12 @@ import os
 import json
 from openai import OpenAI
 from typing import Dict
+from ..core.client_interface import ILLMClient
 
 BASE_DIR = ".."
 CONF_DIR = "config/test_config.json"
 
-class OpenAIClient:
+class OpenAIClient(ILLMClient):
     def __init__(self, config: Dict):
         self.client = OpenAI(
             api_key=config.get("api_key", ""),
@@ -20,7 +21,7 @@ class OpenAIClient:
         self.presence_penalty = config.get("presence_penalty", 0.0)
         self.frequency_penalty = config.get("frequency_penalty", 0.0)
 
-    def generate(self, prompt: str, **kwargs) -> Dict:
+    def response(self, prompt: str, **kwargs) -> Dict:
         """执行模型调用，支持动态参数覆盖配置
         
         :param prompt: 输入提示词
@@ -82,14 +83,14 @@ if __name__ == "__main__":
 
     # 测试用例1：基础功能测试
     print("=== 测试1：正常请求 ===")
-    response = client.generate("请用一句话介绍华中科技大学")
+    response = client.response("请用一句话介绍华中科技大学")
     print(f"响应内容：{response['content'][:50]}...")  # 显示前50字符
     print(f"消耗tokens：{response['tokens']}")
     print(f"使用模型：{response['model']}\n")
 
     # 测试用例2：参数覆盖测试
     print("=== 测试2：参数覆盖 ===")
-    custom_response = client.generate(
+    custom_response = client.response(
         "列出三个武汉的景点",
         temperature=0.2,
         max_tokens=100
@@ -99,12 +100,12 @@ if __name__ == "__main__":
     # 测试用例3：错误处理测试
     print("=== 测试3：错误配置测试 ===")
     error_client = OpenAIClient({"api_key": "invalid_key"})
-    error_response = error_client.generate("测试错误")
+    error_response = error_client.response("测试错误")
     print(f"错误响应：{error_response['content']}\n")
 
     # 测试用例4：边界值测试
     print("=== 测试4：边界值测试 ===")
-    edge_response = client.generate(
+    edge_response = client.response(
         "边界测试",
         max_tokens=1
     )

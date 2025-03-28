@@ -1,8 +1,9 @@
 import json
 import os
+from pprint import pprint
 
 from eval.data_loader import DataLoader
-from pipe.pipeline import PipelineProcessor
+from src.pipe.pipeline import PipelineProcessor
 from utils.data_preprocess import extract_key_values
 from utils.report_process import store_report
 
@@ -43,10 +44,7 @@ if __name__ == "__main__":
         #print(report)
         try:
             #print(f"阶段输入：{report["output_data"]}")
-            print(f"最终输出：{report["output_data"]}")
-            print(f"状态：{report['success']}")
-
-            
+            pprint(report)
         except Exception as e:
             print("流水线错误", e)
         print("***********")

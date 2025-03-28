@@ -1,10 +1,11 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from prompt_optimization.prompt_optimizer import PromptOptimizer
-from utils.data_preprocess import mask_chart_types, get_db_tables_path
-from utils.schema_info_generation import get_csv_schema
-from pipe.storage import StageExecutionData
+
+from src.core.component_interface import IProcessor
+from src.prompt_optimization.prompt_optimizer import PromptOptimizer
+from src.pipe.storage import StageExecutionData
+from utils.data_preprocess import mask_chart_types
 
 BASE_DIR = ""
 TEMPLATE_PATH = "llm_pipe/templates"
@@ -12,12 +13,23 @@ DATA_PATH = "data/visEval_dataset/visEval.json"
 DB_DIR = "data/visEval_dataset/databases"
 TMP_OUTPUT_DIR = "tmp_output"
 
-class Processor:
+class Processor(IProcessor):
     def __init__(self):
         """
         初始化 Processor 类
         """
         self.result = None
+        
+    @property
+    def if_store_variable(self) -> bool:
+        """是否在流水线中存储该组件的变量"""
+        return False
+    
+    @property
+    def if_post_process(self) -> bool:
+        """是否启用后处理逻辑"""
+        return True
+        
     def generate_prompt(self, input_data, data: StageExecutionData):
         """
         处理列选择输出，生成pandas代码生成提示词
@@ -56,3 +68,9 @@ class Processor:
         local_dict["plt"].savefig(os.path.join(BASE_DIR, TMP_OUTPUT_DIR, "output.png"))
         return {"image_path": os.path.join(BASE_DIR, TMP_OUTPUT_DIR, "output.png"),
                 "code": code_str}
+    
+    def store_variable_in_pipeline(self) -> None:
+        """
+        向流水线暴露需要存储的变量，直接返回None
+        """
+        return None

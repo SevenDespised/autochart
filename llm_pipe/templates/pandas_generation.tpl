@@ -10,7 +10,7 @@ This schema describes the CSV files' structure, including filenames, columns, da
 
 Code writing instructions:
 . Use .read_csv to read files. If table names do not include extensions (.csv), add them.
-. Use the `os` module to prepend the table diretory to the file name, and the `table_dir` variable is predefined and can be directly referenced.
+. Use the `os` module to prepend the table diretory to the file name, and the `table_dir` variable is predefined and do not redefine it.
 . Output only the information directly asked in the question.
 . Make sure to return all required information without omissions or extraneous data.
 . Use the example values provided to map question keywords to correct column names.

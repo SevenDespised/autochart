@@ -1,6 +1,6 @@
-from prompt_optimization.utils.read_prompt import read_prompt
-from prompt_optimization.utils.example_sample import sampled_example_str
-from prompt_optimization.utils.read_template import read_template
+from .utils.read_prompt import read_prompt
+from .utils.example_sample import sampled_example_str
+from .utils.read_template import read_template
 
 class PromptOptimizer:
     """
@@ -126,30 +126,3 @@ class PromptOptimizer:
         return self 
     def get_optimized_prompt(self):
         return self.optimized_prompt
-
-# 示例用例
-if __name__ == "__main__":
-    # 示例 1: 添加基本格式提示信息
-    original_prompt = "请分析这段文本的情感倾向"
-    optimizer = PromptOptimizer(original_prompt)
-    instruction = "仔细分析文本中的情感词汇和语气"
-    context = "该文本来自一篇产品评论"
-    output_format = "以积极、消极或中性进行回复"
-    constraint = "回复需简洁明了"
-
-    optimizer.add_basic_format(instruction, context, output_format, constraint)
-    optimized_prompt_1 = optimizer.get_optimized_prompt()
-    print("示例 1: 添加基本格式提示信息")
-    print(optimized_prompt_1)
-    print("-" * 50)
-
-    # 示例 2: 添加聊天相关提示信息
-    original_prompt = "今天天气怎么样？"
-    optimizer = PromptOptimizer(original_prompt)
-    system_content = "这是一个天气咨询的聊天场景"
-    history_message = [["昨天天气很好", "是的，阳光明媚"], ["那今天呢", "还不清楚，我去查一下"]]
-
-    optimizer.add_chat_format_with_history(history_message, system_content)
-    optimized_prompt_2 = optimizer.get_optimized_prompt()
-    print("示例 2: 添加聊天相关提示信息")
-    print(optimized_prompt_2)

@@ -4,7 +4,7 @@ from datetime import datetime
 
 def store_report(report, path = ""):
     timestamp = datetime.now().strftime("%m-%d-%H-%M-%S")
-    model_name = report[0]["model_name"]
+    model_name = report[0]["execution_report"][0]["model"] if report else "default_model"
     # 构造文件名
     filename = f"report_{timestamp}_{model_name}.json"
     full_path = os.path.join(path, filename)
