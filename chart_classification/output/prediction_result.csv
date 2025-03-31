@@ -1,0 +1,3 @@
+field_id,fid,predicted_trace_type,confidence,top1_type,top1_prob,top2_type,top2_prob
+test:skill_description,test:1,Bar,0.7332599139516556,Bar,0.7332599139516556,Pie,0.1943685140685515
+test:fault_count,test:1,Bar,0.6629941199832889,Bar,0.6629941199832889,Pie,0.28351949827135486

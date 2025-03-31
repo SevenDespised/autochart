@@ -12,7 +12,7 @@ from .type_detection import detect_field_type, data_type_to_general_type, data_t
 
 import traceback
 
-np.warnings.filterwarnings('ignore')
+#np.warnings.filterwarnings('ignore')
 
 field_basic_features_list = [
     {'name': 'fid', 'type': 'id'},
@@ -292,17 +292,32 @@ def get_sequence_features(v, field_type, field_general_type):
         r['is_sorted'] = np.array_equal(sorted_v, v)
 
     if field_general_type == 't':
-        v = v.astype('int')
-        sorted_v = sorted_v.astype('int')
+        try:
+            # 对于pandas.Timestamp对象数组
+            v = pd.to_numeric(pd.Series(v)).astype('int64')
+            sorted_v = pd.to_numeric(pd.Series(sorted_v)).astype('int64')
+        except:
+            # 备用方案：如果上面的方法失败，尝试获取Unix时间戳
+            v = np.array([pd.Timestamp(x).timestamp() if pd.notnull(x) else 0 for x in v]).astype('int64')
+            sorted_v = np.array([pd.Timestamp(x).timestamp() if pd.notnull(x) else 0 for x in sorted_v]).astype('int64')
     if field_general_type in ['t', 'q']:
-        sequence_incremental_subtraction = np.subtract(
-            sorted_v[:-1], sorted_v[1:]).astype(int)
+        # 计算差值
+        raw_subtraction = np.subtract(sorted_v[:-1], sorted_v[1:])
+        
+        # 处理非有限值后再转换为整数
+        subtraction_finite = np.nan_to_num(raw_subtraction, nan=0, posinf=np.iinfo(np.int64).max, neginf=np.iinfo(np.int64).min)
+        sequence_incremental_subtraction = subtraction_finite.astype(int)
+        
         r['is_monotonic'] = np.all(
             sequence_incremental_subtraction <= 0) or np.all(
             sequence_incremental_subtraction >= 0)
-        r['sortedness'] = np.absolute(
-            pearsonr(v, sorted_v)[0])  # or use inversions
-        # np.allclose(v, sorted_v)  # np.array_equal(sorted_v, v)
+        
+        # 添加长度检查以避免pearsonr错误
+        if len(v) >= 2:
+            r['sortedness'] = np.absolute(pearsonr(v, sorted_v)[0])  # or use inversions
+        else:
+            r['sortedness'] = 1.0  # 如果只有一个元素，认为它已完全排序
+        
         r['is_sorted'] = np.array_equal(sorted_v, v)
     if field_general_type == 'q':
         sequence_incremental_division = np.divide(sorted_v[:-1], sorted_v[1:])

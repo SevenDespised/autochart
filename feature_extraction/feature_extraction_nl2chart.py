@@ -18,6 +18,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 
+import warnings
+warnings.filterwarnings("ignore")
+
+
 MAX_FIELDS = 25
 total_charts = 0
 charts_without_data = 0
@@ -87,7 +91,7 @@ def write_batch_results(batch_results, features_dir_name, write_header=False):
     }
     
     for (k, v) in concatenated_results.items():
-        output_file_name = os.path.join(features_dir_name, "nl2chart_" + f"{k}.csv")
+        output_file_name = os.path.join(features_dir_name, "py12nl2chart_" + f"{k}.csv")
         v.to_csv(output_file_name, mode='a', index=False, header=write_header)
 
 
@@ -165,7 +169,10 @@ for i in feature_list['float']:
     quantile_1, quantile_3 = dict_cut_off[i]
     df_test[i] = df_test[i].apply(cut_off)
 
+# 保存 dict_cut_off 到 pickle 文件
+with open("feature_extraction/nl2chart_dict_cut_off.pkl", 'wb') as f:
+    pickle.dump(dict_cut_off, f)
 
-df_train.to_csv((base_dir + f"features/nl2chart_feature_train.csv"), index=False)
-df_test.to_csv((base_dir + f"features/nl2chart_feature_test.csv"), index=False)
+df_train.to_csv((base_dir + f"features/py12nl2chart_feature_train.csv"), index=False)
+df_test.to_csv((base_dir + f"features/py12nl2chart_feature_test.csv"), index=False)
 
