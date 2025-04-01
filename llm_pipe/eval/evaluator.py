@@ -33,32 +33,32 @@ class Evaluator:
         """设置流水线处理器"""
         self.pipeline = PipelineProcessor(pipeline_config)
     
-    def evaluate_lists(self, predicted_lists: List[List], actual_lists: List[List]) -> bool:
+    def evaluate_lists(self, predicted_lists: List[List], ground_truth_lists: List[List]) -> bool:
         """
         评估预测列表和真实列表是否匹配
         
         Args:
             predicted_lists: 预测的数据列表
-            actual_lists: 真实的数据列表
+            ground_truth_lists: 真实的数据列表
             
         Returns:
             bool: 评估结果，True表示匹配成功
         """
         # 首先检查列表数量是否相同
-        if len(predicted_lists) != len(actual_lists):
+        if len(predicted_lists) != len(ground_truth_lists):
             return False
         
         # 创建真实列表的副本，用于标记已匹配项
-        remaining_actual = actual_lists.copy()
+        remaining_gt = ground_truth_lists.copy()
         
         # 检查每个预测列表是否都能在真实列表中找到匹配
         for pred_list in predicted_lists:
             found_match = False
             
-            for i, act_list in enumerate(remaining_actual):
+            for i, act_list in enumerate(remaining_gt):
                 if pred_list == act_list:
                     # 找到匹配，从剩余真实列表中移除
-                    remaining_actual.pop(i)
+                    remaining_gt.pop(i)
                     found_match = True
                     break
             

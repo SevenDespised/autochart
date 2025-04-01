@@ -24,7 +24,7 @@ if __name__ == "__main__":
     
     data = extract_key_values(list(json_data.values()), ["nl_queries", "db_id", "hardness"], ["x_data", "y_data", "chart"])
     data_loader = DataLoader(data, batch_size=1)
-     
+
     num = 1
     n = len(data)
     all_reports = []
