@@ -4,15 +4,19 @@ import sys
 from pprint import pprint
 from pathlib import Path
 
+current_dir = Path(__file__).parent
+root_dir = current_dir.parent
+sys.path.insert(0, str(root_dir))
+
 from llm_pipe.eval.evaluator import Evaluator
-from eval.data_loader import DataLoader
-from utils.data_preprocess import extract_key_values
+from llm_pipe.utils.data_preprocess import extract_key_values
 
 # 配置路径
 BASE_DIR = ""
+DATA_DIR = "data/visEval_dataset/visEval_clear.json"
 DATA_DIR = "data/visEval_dataset/visEval.json"
-CONF_DIR = "llm_pipe/config/config.json"
-REPORT_DIR = "llm_pipe/reports/evaluation_report.json"
+CONF_DIR = "llm_pipe/config/experiment.json"
+REPORT_DIR = "experiment_res/evaluation_report.json"
 
 def main():
     # 加载数据和配置
@@ -32,16 +36,16 @@ def main():
         # 提取数据
         data = extract_key_values(
             list(json_data.values()), 
-            ["nl_queries", "db_id", "hardness"], 
+            ["nl_queries", "db_id", "hardness", "sort"], 
             ["x_data", "y_data", "chart"]
         )
         
         # 创建评估器
         evaluator = Evaluator(config)
         
-        # 准备测试用例 - 默认评估前10个样本
+        # 准备测试用例 - 默认评估前5个样本
         test_cases = []
-        limit = 10
+        limit = 5
         
         for i, item in enumerate(data):
             if i >= limit:
@@ -50,7 +54,7 @@ def main():
             # 构建测试用例
             test_case = {
                 'input': item["x_data"],
-                'expected_output': item["y_data"]  # y_data作为期望输出
+                'expected_output': item["y_data"]["x_data"] + item["y_data"]["y_data"]
             }
             test_cases.append(test_case)
         

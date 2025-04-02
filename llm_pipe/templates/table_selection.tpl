@@ -23,8 +23,8 @@ Please respond with a JSON object structured as follows:
 
 ```json
 {{
-  "chain_of_thought_reasoning": "Short explanation of the logical analysis that led to the selection of the tables.",
-  "table_names": ["Table1", "Table2", "Table3", ...]
+  "table_names": ["Table1", "Table2", "Table3", ...],
+  "chain_of_thought_reasoning": "Short explanation of the logical analysis that led to the selection of the tables."
 }}
 ```
 Ensure that table names include the file extension such as ".csv".

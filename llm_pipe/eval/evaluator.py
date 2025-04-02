@@ -33,7 +33,7 @@ class Evaluator:
         """设置流水线处理器"""
         self.pipeline = PipelineProcessor(pipeline_config)
     
-    def evaluate_lists(self, predicted_lists: List[List], ground_truth_lists: List[List]) -> bool:
+    def evaluate_lists(self, predicted_lists: List[List], ground_truth_lists: List[List], is_sorted: Any) -> bool:
         """
         评估预测列表和真实列表是否匹配
         
@@ -56,11 +56,20 @@ class Evaluator:
             found_match = False
             
             for i, act_list in enumerate(remaining_gt):
-                if pred_list == act_list:
-                    # 找到匹配，从剩余真实列表中移除
-                    remaining_gt.pop(i)
-                    found_match = True
-                    break
+                # 如果是排序的，则需要检查顺序是否一致，否则只需检查内容是否一致
+                if is_sorted:
+                    if pred_list == act_list:
+                        # 找到匹配，从剩余真实列表中移除
+                        remaining_gt.pop(i)
+                        found_match = True
+                        break
+                else:
+                    from collections import Counter
+                    if Counter(pred_list) == Counter(act_list):
+                        # 找到匹配，从剩余真实列表中移除
+                        remaining_gt.pop(i)
+                        found_match = True
+                        break
             
             if not found_match:
                 # 有预测列表未能匹配到任何真实列表
@@ -89,33 +98,43 @@ class Evaluator:
         results = []
         correct_count = 0
         total_tokens = 0
-        
+        n = len(test_cases)
         for i, test_case in enumerate(test_cases):
+            print(f"[{i + 1}/{n}] 正在评估测试用例...")
             input_data = test_case['input']
             expected_output = test_case['expected_output']
             
             # 执行流水线
             pipeline_result = self.pipeline.execute_pipeline(input_data)
-            predicted_output = pipeline_result['output_data']
-            
+            predicted_output_dict = pipeline_result['output_data'].get("columns_data", {})
+
+            # 提取字典的值列表
+            predicted_output = list(predicted_output_dict.values())
+
             # 评估结果
-            is_correct = self.evaluate_lists(predicted_output, expected_output)
+            is_correct = self.evaluate_lists(predicted_output, expected_output, input_data["sort"])
             if is_correct:
                 correct_count += 1
             
             # 记录本次执行的token消耗
             tokens_used = pipeline_result.get('tokens', 0)
             total_tokens += tokens_used
-            
-            result = {
-                'test_case_id': i,
-                'input': input_data,
-                'expected': expected_output,
-                'predicted': predicted_output,
-                'correct': is_correct,
-                'execution_time': pipeline_result['execution_time'],
-                'tokens': tokens_used
-            }
+            if pipeline_result["success"]:
+                result = {
+                    'status': 'success',
+                    'test_case_id': i,
+                    'input': input_data,
+                    'expected': expected_output,
+                    'predicted': predicted_output,
+                    'correct': is_correct,
+                    'execution_time': pipeline_result['execution_time'],
+                    'tokens': tokens_used
+                }
+            else:
+                result = {
+                    'status': 'failure',
+                    'report': pipeline_result['execution_report']
+                }
             results.append(result)
         
         # 计算总体评估结果
@@ -140,7 +159,7 @@ class Evaluator:
             return {"error": "No evaluation results available"}
         
         total = len(self.results)
-        correct = sum(1 for result in self.results if result['correct'])
+        correct = sum(1 for result in self.results if result.get('correct', False))
         total_tokens = sum(result.get('tokens', 0) for result in self.results)
         
         return {

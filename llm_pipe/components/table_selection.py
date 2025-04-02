@@ -1,10 +1,10 @@
 import os
 
-from src.core.component_interface import IProcessor
-from src.prompt_optimization.prompt_optimizer import PromptOptimizer
-from src.pipe.storage import StageExecutionData
-from utils.data_preprocess import mask_chart_types, get_db_tables_path
-from utils.schema_info_generation import get_csv_schema
+from ..src.core.component_interface import IProcessor
+from ..src.prompt_optimization.prompt_optimizer import PromptOptimizer
+from ..src.pipe.storage import StageExecutionData
+from ..utils.data_preprocess import mask_chart_types, get_db_tables_path
+from ..utils.schema_info_generation import get_csv_schema
 
 BASE_DIR = ""
 TEMPLATE_PATH = "llm_pipe/templates"

@@ -2,13 +2,13 @@ import json
 import os
 from pprint import pprint
 
-from eval.data_loader import DataLoader
-from src.pipe.pipeline import PipelineProcessor
-from utils.data_preprocess import extract_key_values
-from utils.report_process import store_report
+from llm_pipe.eval.data_loader import DataLoader
+from llm_pipe.src.pipe.pipeline import PipelineProcessor
+from llm_pipe.utils.data_preprocess import extract_key_values
+from llm_pipe.utils.report_process import store_report
 
 BASE_DIR = ""
-DATA_DIR = "data/visEval_dataset/visEval.json"
+DATA_DIR = "data/visEval_dataset/visEval_clear.json"
 CONF_DIR = "llm_pipe/config/hw_deepseek_v3.json"
 CONF_DIR = "llm_pipe/config/config.json"
 REPORT_DIR = "llm_pipe/reports"

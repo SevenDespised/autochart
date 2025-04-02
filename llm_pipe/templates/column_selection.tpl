@@ -26,10 +26,11 @@ Please respond with a JSON object structured as follows:
 
 ```json
 {{
-  "chain_of_thought_reasoning": "Short explanation of the logical analysis that led to the selection of the columns from every table.",
+  
   "TABLE_NAME1": ["COLUMN1", "COLUMN2", ...],
   "TABLE_NAME2": ["COLUMN1", "COLUMN2", ...],
   ...
+  "chain_of_thought_reasoning": "Short explanation of the logical analysis that led to the selection of the columns from every table."
 }}
 ```
 Ensure that table names include the file extension such as ".csv".

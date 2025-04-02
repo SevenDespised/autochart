@@ -2,10 +2,10 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from src.core.component_interface import IProcessor
-from src.prompt_optimization.prompt_optimizer import PromptOptimizer
-from src.pipe.storage import StageExecutionData
-from utils.data_preprocess import mask_chart_types
+from ..src.core.component_interface import IProcessor
+from ..src.prompt_optimization.prompt_optimizer import PromptOptimizer
+from ..src.pipe.storage import StageExecutionData
+from ..utils.data_preprocess import mask_chart_types
 
 BASE_DIR = ""
 TEMPLATE_PATH = "llm_pipe/templates"
