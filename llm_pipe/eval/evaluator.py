@@ -3,6 +3,7 @@ import os
 from typing import List, Dict, Any, Union
 import sys
 from pathlib import Path
+import datetime
 
 # 添加项目根目录到系统路径
 current_dir = Path(__file__).parent
@@ -37,7 +38,7 @@ class Evaluator:
         """
         评估预测列表和真实列表是否匹配
         
-        Args:
+        Params:
             predicted_lists: 预测的数据列表
             ground_truth_lists: 真实的数据列表
             
@@ -78,13 +79,14 @@ class Evaluator:
         # 所有预测列表都匹配成功
         return True
     
-    def evaluate_pipeline(self, test_cases: List[Dict], config: Dict = None) -> Dict:
+    def evaluate_pipeline(self, test_cases: List[Dict], config: Dict = None, save_interval: int = 10, save_path: str = None) -> Dict:
         """
         评估流水线处理器
         
         Args:
             test_cases: 测试用例列表，每个用例包含输入和期望输出
             config: 可选的流水线配置
+            save_interval: 每处理多少条数据保存一次中间结果，默认为10
             
         Returns:
             Dict: 评估报告
@@ -95,7 +97,11 @@ class Evaluator:
         if not self.pipeline:
             raise ValueError("Pipeline not configured. Please set a pipeline configuration.")
         
-        results = []
+        # 创建结果保存目录
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.results_dir = os.path.join(save_path, f"eval_results_{timestamp}")
+        os.makedirs(self.results_dir, exist_ok=True)
+        
         correct_count = 0
         total_tokens = 0
         n = len(test_cases)
@@ -135,7 +141,10 @@ class Evaluator:
                     'status': 'failure',
                     'report': pipeline_result['execution_report']
                 }
-            results.append(result)
+            self.results.append(result)
+            
+            # 每处理save_interval条数据保存一次中间结果
+            self.save_interim_results(interval=save_interval)
         
         # 计算总体评估结果
         evaluation_report = {
@@ -143,10 +152,8 @@ class Evaluator:
             'correct_cases': correct_count,
             'accuracy': correct_count / len(test_cases) if test_cases else 0,
             'total_tokens': total_tokens,
-            'results': results
-        }
-        
-        self.results = results
+            'results': self.results
+        }   
         return evaluation_report
     
     def evaluate_single(self, predicted_lists: List[List], actual_lists: List[List]) -> bool:
@@ -168,3 +175,56 @@ class Evaluator:
             'accuracy': correct / total if total > 0 else 0,
             'total_tokens': total_tokens
         }
+
+    def save_interim_results(self, interval: int = 10, results_dir: str = None) -> str:
+        """
+        每处理n条数据保存一次中间结果，只保存当前批次的n条数据
+        
+        Args:
+            interval: 保存频率，每处理interval条数据保存一次
+            results_dir: 可选的结果保存目录路径
+            
+        Returns:
+            str: 结果保存的目录路径
+        """
+        # 如果没有提供目录，在当前目录创建带时间戳的results目录
+        if not hasattr(self, 'results_dir') or not self.results_dir:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.results_dir = results_dir or os.path.join(os.getcwd(), f"eval_results_{timestamp}")
+            os.makedirs(self.results_dir, exist_ok=True)
+        
+        # 只有在有结果时才保存
+        if hasattr(self, 'results') and self.results:
+            # 计算当前批次号
+            current_batch = len(self.results) // interval
+            
+            # 如果完成了一个完整批次
+            if current_batch > 0 and len(self.results) % interval == 0:
+                # 计算当前批次的起始和结束索引
+                start_idx = (current_batch - 1) * interval
+                end_idx = current_batch * interval
+                
+                # 提取当前批次的结果
+                current_results = self.results[start_idx:end_idx]
+                
+                # 创建带有批次号的文件名
+                filename = os.path.join(self.results_dir, f"results_batch_{current_batch}.json")
+                
+                # 计算当前批次的统计信息
+                correct_cases = sum(1 for result in current_results if result.get('correct', False))
+                
+                # 创建当前批次的评估报告
+                batch_report = {
+                    'batch_number': current_batch,
+                    'batch_size': len(current_results),
+                    'correct_cases': correct_cases,
+                    'batch_accuracy': correct_cases / len(current_results) if current_results else 0,
+                    'overall_progress': f"{len(self.results)} cases processed",
+                    'batch_results': current_results
+                }
+                
+                # 将结果保存到文件
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(batch_report, f, ensure_ascii=False, indent=2)
+                
+                print(f"保存第{current_batch}批次结果到: {filename}")

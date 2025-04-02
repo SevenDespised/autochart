@@ -6,6 +6,7 @@ class DataLoader:
     def __init__(self, data: List[Dict], batch_size: int=32, shuffle: bool=False):
         """
         初始化数据加载器
+        
         :param data: 字典列表形式的数据
         :param batch_size: 每个批次的数据数量
         :param shuffle: 是否在每个epoch开始时打乱数据

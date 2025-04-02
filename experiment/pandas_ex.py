@@ -17,6 +17,7 @@ DATA_DIR = "data/visEval_dataset/visEval_clear.json"
 DATA_DIR = "data/visEval_dataset/visEval.json"
 CONF_DIR = "llm_pipe/config/experiment.json"
 REPORT_DIR = "experiment_res/evaluation_report.json"
+EXPERIMENT_DIR = "experiment_res/"
 
 def main():
     # 加载数据和配置
@@ -62,7 +63,7 @@ def main():
         
         # 运行评估
         print("开始评估...")
-        evaluation_report = evaluator.evaluate_pipeline(test_cases)
+        evaluation_report = evaluator.evaluate_pipeline(test_cases, save_path= EXPERIMENT_DIR, save_interval=1)
         
         # 保存评估报告
         os.makedirs(os.path.dirname(report_path), exist_ok=True)
