@@ -73,9 +73,8 @@ class Processor(IProcessor):
         for col in result.columns:
             columns_data[col] = result[col].tolist()
         
-        # 返回DataFrame和按列转换的数据
+        # 返回按列转换的数据
         return {
-            "df": result,
             "columns_data": columns_data
         }
     

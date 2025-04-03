@@ -42,58 +42,6 @@ def extract_key_values(data_list: list, target_x_keys: list, target_y_keys: list
     extracted_res = [find_key_values(item) for item in data_list]
     return extracted_res
 
-if __name__ == "__main__":
-    # 示例数据结构（包含嵌套字典和列表）
-    test_data = [
-        {
-            "user": {
-                "info": {
-                    "name": "Alice",
-                    "age": 30,
-                    "contact": {
-                        "email": "alice@example.com"
-                    }
-                }
-            },
-            "scores": [
-                {"subject": "Math", "score": 95},
-                {"subject": "Physics", "score": 88}
-            ]
-        },
-        {
-            "user": {
-                "info": {
-                    "name": "Bob",
-                    "age": 25
-                }
-            },
-            "scores": [
-                {"subject": "Chemistry", "score": 92}
-            ]
-        },
-        {
-            "user": {
-                "info": {
-                    "name": "Charlie"
-                }
-            },
-            "scores": []
-        }
-    ]
-
-    # 定义要提取的多个x键和y键
-    x_keys = ['name', 'age']
-    y_keys = ['score', 'subject']
-
-    # 调用函数提取数据
-    result = extract_key_values(test_data, x_keys, y_keys)
-
-    # 打印结果
-    for idx, sample in enumerate(result, 1):
-        print(f"Sample {idx}:")
-        print(f"  x_data: {sample['x_data']}")
-        print(f"  y_data: {sample['y_data']}\n")
-
 def get_db_tables_path(path, file_name, db_id) -> list:
     import json 
     import os
@@ -120,6 +68,62 @@ def mask_chart_types(string: str):
         if tmp_string != string:
             string = tmp_string
     return string
+
+def safe_json_serialize(obj):
+    """
+    将输入对象转换为JSON安全的数据结构
+    
+    处理以下JSON不支持的数据类型:
+    - 非字符串键的字典
+    - 集合(set)
+    - 复数(complex)
+    - 日期时间对象
+    - 字节数据(bytes/bytearray)
+    - 特殊浮点值(NaN, Infinity等)
+    - 自定义对象
+    
+    返回:
+        转换后的JSON安全数据
+    """
+    if obj is None or isinstance(obj, (bool, int, float, str)) and not isinstance(obj, float) or (isinstance(obj, float) and obj.is_integer() or (obj == obj and obj != float('inf') and obj != float('-inf'))):
+        return obj
+    
+    elif isinstance(obj, dict):
+        # 处理字典，确保键是字符串
+        return {str(key): safe_json_serialize(value) for key, value in obj.items()}
+    
+    elif isinstance(obj, list) or isinstance(obj, tuple):
+        # 处理列表和元组
+        return [safe_json_serialize(item) for item in obj]
+    
+    elif isinstance(obj, set):
+        # 将集合转换为列表
+        return [safe_json_serialize(item) for item in obj]
+    
+    elif isinstance(obj, complex):
+        # 将复数转换为字符串表示
+        return str(obj)
+    
+    elif hasattr(obj, 'isoformat'):
+        # 处理日期时间对象
+        return obj.isoformat()
+    
+    elif isinstance(obj, bytes) or isinstance(obj, bytearray):
+        # 将字节转换为base64编码的字符串
+        import base64
+        return base64.b64encode(obj).decode('ascii')
+    
+    elif isinstance(obj, float) and (obj != obj or obj == float('inf') or obj == float('-inf')):
+        # 处理特殊浮点值：NaN, Infinity, -Infinity
+        return str(obj)
+    
+    elif hasattr(obj, '__dict__'):
+        # 处理自定义对象，转换为字典
+        return safe_json_serialize(obj.__dict__)
+    
+    else:
+        # 其他类型转为字符串
+        return str(obj)
 
 
 

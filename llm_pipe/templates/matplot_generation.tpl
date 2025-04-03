@@ -21,6 +21,7 @@ Code writing instructions:
 6. Do not use plt.show(). 
 7. Save the figure as a png-file in the figure saving directory. Use `os` module to prepend the directory to file name, and the `save_dir` variable is predefined and do not redefine it.
 8. File name should include time-stamp.
+9. Attention, in dataframe, at least two columns should be extracted for the chart.
 
 ###
 Question: 

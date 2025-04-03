@@ -1,10 +1,11 @@
-import json
 import os
-from typing import List, Dict, Any, Union
 import sys
-from pathlib import Path
 import datetime
+import json
+from typing import List, Dict, Any, Union
+from pathlib import Path
 
+from ..utils.data_preprocess import safe_json_serialize
 # 添加项目根目录到系统路径
 current_dir = Path(__file__).parent
 root_dir = current_dir.parent.parent
@@ -29,55 +30,11 @@ class Evaluator:
         if pipeline_config:
             self.pipeline = PipelineProcessor(pipeline_config)
         self.results = []
+        self.reports = []
         
     def set_pipeline(self, pipeline_config: Dict):
         """设置流水线处理器"""
         self.pipeline = PipelineProcessor(pipeline_config)
-    
-    def evaluate_lists(self, predicted_lists: List[List], ground_truth_lists: List[List], is_sorted: Any) -> bool:
-        """
-        评估预测列表和真实列表是否匹配
-        
-        Params:
-            predicted_lists: 预测的数据列表
-            ground_truth_lists: 真实的数据列表
-            
-        Returns:
-            bool: 评估结果，True表示匹配成功
-        """
-        # 首先检查列表数量是否相同
-        if len(predicted_lists) != len(ground_truth_lists):
-            return False
-        
-        # 创建真实列表的副本，用于标记已匹配项
-        remaining_gt = ground_truth_lists.copy()
-        
-        # 检查每个预测列表是否都能在真实列表中找到匹配
-        for pred_list in predicted_lists:
-            found_match = False
-            
-            for i, act_list in enumerate(remaining_gt):
-                # 如果是排序的，则需要检查顺序是否一致，否则只需检查内容是否一致
-                if is_sorted:
-                    if pred_list == act_list:
-                        # 找到匹配，从剩余真实列表中移除
-                        remaining_gt.pop(i)
-                        found_match = True
-                        break
-                else:
-                    from collections import Counter
-                    if Counter(pred_list) == Counter(act_list):
-                        # 找到匹配，从剩余真实列表中移除
-                        remaining_gt.pop(i)
-                        found_match = True
-                        break
-            
-            if not found_match:
-                # 有预测列表未能匹配到任何真实列表
-                return False
-        
-        # 所有预测列表都匹配成功
-        return True
     
     def evaluate_pipeline(self, test_cases: List[Dict], config: Dict = None, save_interval: int = 10, save_path: str = None) -> Dict:
         """
@@ -106,46 +63,64 @@ class Evaluator:
         total_tokens = 0
         n = len(test_cases)
         for i, test_case in enumerate(test_cases):
-            print(f"[{i + 1}/{n}] 正在评估测试用例...")
-            input_data = test_case['input']
-            expected_output = test_case['expected_output']
-            
-            # 执行流水线
-            pipeline_result = self.pipeline.execute_pipeline(input_data)
-            predicted_output_dict = pipeline_result['output_data'].get("columns_data", {})
+            try:
+                print(f"[{i + 1}/{n}] 正在评估测试用例...")
+                input_data = test_case['input']
+                expected_output = test_case['expected_output']
+                
+                # 执行流水线
+                pipeline_report = self.pipeline.execute_pipeline(input_data)
+                pipeline_report['test_case_id'] = i
+                self.reports.append(pipeline_report)
+                predicted_output_dict = pipeline_report['output_data'].get("columns_data", {})
 
-            # 提取字典的值列表
-            predicted_output = list(predicted_output_dict.values())
+                # 提取字典的值列表
+                predicted_output = list(predicted_output_dict.values())
 
-            # 评估结果
-            is_correct = self.evaluate_lists(predicted_output, expected_output, input_data["sort"])
-            if is_correct:
-                correct_count += 1
-            
-            # 记录本次执行的token消耗
-            tokens_used = pipeline_result.get('tokens', 0)
-            total_tokens += tokens_used
-            if pipeline_result["success"]:
+                is_sorted = False if not input_data["sort"] else True
+                # 评估结果
+                is_correct = self.are_nested_lists_equal(predicted_output, expected_output, is_sorted)
+                if is_correct:
+                    correct_count += 1
+                
+                # 记录本次执行的token消耗
+                tokens_used = pipeline_report.get('tokens', 0)
+                total_tokens += tokens_used
+                if pipeline_report["success"]:
+                    result = {
+                        'status': 'success',
+                        'test_case_id': i,
+                        'input': input_data,
+                        'expected': expected_output,
+                        'predicted': predicted_output,
+                        'correct': is_correct,
+                        'execution_time': pipeline_report['execution_time'],
+                        'tokens': tokens_used
+                    }
+                else:
+                    result = {
+                        'status': 'failure',
+                        'test_case_id': i,
+                        'report': pipeline_report['execution_report']
+                    }
+                self.results.append(result)
+                # 每处理save_interval条数据保存一次中间结果
+                self.save_interim_results(interval=save_interval)
+            except Exception as e:
+                print(f"处理测试用例 {i} 时发生错误: {e}")
                 result = {
-                    'status': 'success',
+                    'status': 'error',
                     'test_case_id': i,
-                    'input': input_data,
-                    'expected': expected_output,
-                    'predicted': predicted_output,
-                    'correct': is_correct,
-                    'execution_time': pipeline_result['execution_time'],
-                    'tokens': tokens_used
+                    'error_message': str(e),
+                    'report': pipeline_report
                 }
-            else:
-                result = {
-                    'status': 'failure',
-                    'report': pipeline_result['execution_report']
-                }
-            self.results.append(result)
-            
-            # 每处理save_interval条数据保存一次中间结果
-            self.save_interim_results(interval=save_interval)
+                self.results.append(result)
+                # 每处理save_interval条数据保存一次中间结果
+                self.save_interim_results(interval=save_interval)
         
+        # 保存最后一个不完整批次的数据
+        self.save_interim_results(interval=save_interval, force_save=True)
+
         # 计算总体评估结果
         evaluation_report = {
             'total_cases': len(test_cases),
@@ -155,7 +130,72 @@ class Evaluator:
             'results': self.results
         }   
         return evaluation_report
+    def are_nested_lists_equal(self, nested_list1, nested_list2, consider_order=False):
+        """
+        判断两个列表列表是否相等
+        
+        Args:
+            nested_list1: 第一个列表列表
+            nested_list2: 第二个列表列表  
+            consider_order: 是否考虑内部列表元素顺序
+        """
+        if len(nested_list1) != len(nested_list2):
+            return False
     
+        def are_values_equal(val1, val2):
+            """判断两个值是否相等，处理数值型和字符串型的匹配"""
+            if val1 == val2:
+                return True
+            
+            # 处理数值型和字符串型的匹配（如"1"和1）
+            try:
+                return float(val1) == float(val2)
+            except (ValueError, TypeError):
+                return False
+
+        def are_lists_equal(list1, list2, consider_order=False):
+            """
+            判断两个值列表是否相等
+            
+            Args:
+                list1: 第一个列表
+                list2: 第二个列表
+                consider_order: 是否考虑元素顺序
+            """
+            if len(list1) != len(list2):
+                return False
+            
+            # 考虑顺序时，逐个元素比较
+            if consider_order:
+                return all(are_values_equal(a, b) for a, b in zip(list1, list2))
+            
+            # 不考虑顺序时，使用计数比较法
+            # 由于需要特殊处理数值和字符串匹配，不能直接使用Counter
+            items2 = list(list2)
+            for item1 in list1:
+                found = False
+                for i, item2 in enumerate(items2):
+                    if are_values_equal(item1, item2):
+                        items2.pop(i)
+                        found = True
+                        break
+                if not found:
+                    return False
+            return True
+    
+        # 列表列表元素无序，需要两两匹配
+        remaining = list(nested_list2)
+        for sublist1 in nested_list1:
+            found = False
+            for i, sublist2 in enumerate(remaining):
+                if are_lists_equal(sublist1, sublist2, consider_order):
+                    remaining.pop(i)
+                    found = True
+                    break
+            if not found:
+                return False
+        return True
+
     def evaluate_single(self, predicted_lists: List[List], actual_lists: List[List]) -> bool:
         """评估单个预测结果和实际结果"""
         return self.evaluate_lists(predicted_lists, actual_lists)
@@ -176,13 +216,14 @@ class Evaluator:
             'total_tokens': total_tokens
         }
 
-    def save_interim_results(self, interval: int = 10, results_dir: str = None) -> str:
+    def save_interim_results(self, interval: int = 10, results_dir: str = None, force_save: bool = False) -> str:
         """
         每处理n条数据保存一次中间结果，只保存当前批次的n条数据
         
         Args:
             interval: 保存频率，每处理interval条数据保存一次
             results_dir: 可选的结果保存目录路径
+            force_save: 是否强制保存当前批次(用于保存最后不完整的批次)
             
         Returns:
             str: 结果保存的目录路径
@@ -195,36 +236,51 @@ class Evaluator:
         
         # 只有在有结果时才保存
         if hasattr(self, 'results') and self.results:
-            # 计算当前批次号
-            current_batch = len(self.results) // interval
+            # 计算当前批次号和剩余数量
+            total_results = len(self.results)
+            current_batch = total_results // interval
+            remainder = total_results % interval
             
-            # 如果完成了一个完整批次
-            if current_batch > 0 and len(self.results) % interval == 0:
-                # 计算当前批次的起始和结束索引
-                start_idx = (current_batch - 1) * interval
-                end_idx = current_batch * interval
+            # 判断是否需要保存数据
+            should_save = (remainder == 0 and current_batch > 0) or (force_save and remainder > 0)
+            
+            if should_save:
+                # 确定要保存的批次范围
+                if remainder == 0 and current_batch > 0:
+                    # 完整批次
+                    start_idx = (current_batch - 1) * interval
+                    end_idx = current_batch * interval
+                    batch_number = current_batch
+                else:
+                    # 不完整批次
+                    start_idx = current_batch * interval
+                    end_idx = total_results
+                    batch_number = current_batch + 1
                 
                 # 提取当前批次的结果
                 current_results = self.results[start_idx:end_idx]
+                current_reports = self.reports[start_idx:end_idx] if hasattr(self, 'reports') else []
                 
                 # 创建带有批次号的文件名
-                filename = os.path.join(self.results_dir, f"results_batch_{current_batch}.json")
+                filename = os.path.join(self.results_dir, f"results_batch_{batch_number}.json")
                 
                 # 计算当前批次的统计信息
                 correct_cases = sum(1 for result in current_results if result.get('correct', False))
                 
                 # 创建当前批次的评估报告
                 batch_report = {
-                    'batch_number': current_batch,
+                    'batch_number': batch_number,
                     'batch_size': len(current_results),
                     'correct_cases': correct_cases,
                     'batch_accuracy': correct_cases / len(current_results) if current_results else 0,
-                    'overall_progress': f"{len(self.results)} cases processed",
-                    'batch_results': current_results
+                    'overall_progress': f"{total_results} cases processed",
+                    'batch_results': current_results,
+                    'batch_reports': current_reports
                 }
                 
-                # 将结果保存到文件
+                # 应用JSON安全序列化处理
+                safe_report = safe_json_serialize(batch_report)
+
                 with open(filename, 'w', encoding='utf-8') as f:
-                    json.dump(batch_report, f, ensure_ascii=False, indent=2)
-                
-                print(f"保存第{current_batch}批次结果到: {filename}")
+                    json.dump(safe_report, f, ensure_ascii=False, indent=2)
+        return self.results_dir
