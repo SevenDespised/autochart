@@ -67,6 +67,12 @@ class Evaluator:
                 print(f"[{i + 1}/{n}] 正在评估测试用例...")
                 input_data = test_case['input']
                 expected_output = test_case['expected_output']
+
+                #####
+                #if "Show me about the distribution of date_address_to and the amount of date_address_to, and group by attribute other_details and bin date_address_to by month in a bar chart." not in input_data["nl_queries"]:
+                #    print(f"跳过测试用例 {i + 1}，输入数据不符合预期格式。")
+                #    continue
+                #####
                 
                 # 执行流水线
                 pipeline_report = self.pipeline.execute_pipeline(input_data)
@@ -101,22 +107,22 @@ class Evaluator:
                     result = {
                         'status': 'failure',
                         'test_case_id': i,
-                        'report': pipeline_report['execution_report']
                     }
                 self.results.append(result)
-                # 每处理save_interval条数据保存一次中间结果
-                self.save_interim_results(interval=save_interval)
             except Exception as e:
                 print(f"处理测试用例 {i} 时发生错误: {e}")
                 result = {
                     'status': 'error',
                     'test_case_id': i,
                     'error_message': str(e),
-                    'report': pipeline_report
                 }
                 self.results.append(result)
-                # 每处理save_interval条数据保存一次中间结果
+
+            # 每处理save_interval条数据保存一次中间结果
+            try:
                 self.save_interim_results(interval=save_interval)
+            except Exception as e:
+                print(f"json错误: {e}")
         
         # 保存最后一个不完整批次的数据
         self.save_interim_results(interval=save_interval, force_save=True)
@@ -280,7 +286,16 @@ class Evaluator:
                 
                 # 应用JSON安全序列化处理
                 safe_report = safe_json_serialize(batch_report)
-
                 with open(filename, 'w', encoding='utf-8') as f:
-                    json.dump(safe_report, f, ensure_ascii=False, indent=2)
+                    try:
+                        json.dump(safe_report, f, ensure_ascii=False, indent=2)
+                    except Exception as e:
+                        json.dump({
+                                    'batch_number': batch_number,
+                                    'batch_size': len(current_results),
+                                    'correct_cases': correct_cases,
+                                    'batch_accuracy': correct_cases / len(current_results) if current_results else 0,
+                                    'overall_progress': f"{total_results} cases processed",
+                                    'dump_error': str(e),
+                                  }, f, ensure_ascii=False, indent=2)
         return self.results_dir

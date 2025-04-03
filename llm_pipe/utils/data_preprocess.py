@@ -85,8 +85,12 @@ def safe_json_serialize(obj):
     返回:
         转换后的JSON安全数据
     """
-    if obj is None or isinstance(obj, (bool, int, float, str)) and not isinstance(obj, float) or (isinstance(obj, float) and obj.is_integer() or (obj == obj and obj != float('inf') and obj != float('-inf'))):
+    import datetime
+    if obj is None or isinstance(obj, (bool, int, float, str)):
         return obj
+    
+    elif isinstance(obj, (datetime.date, datetime.datetime)):
+        return obj.isoformat()
     
     elif isinstance(obj, dict):
         # 处理字典，确保键是字符串
@@ -104,9 +108,6 @@ def safe_json_serialize(obj):
         # 将复数转换为字符串表示
         return str(obj)
     
-    elif hasattr(obj, 'isoformat'):
-        # 处理日期时间对象
-        return obj.isoformat()
     
     elif isinstance(obj, bytes) or isinstance(obj, bytearray):
         # 将字节转换为base64编码的字符串
@@ -116,10 +117,6 @@ def safe_json_serialize(obj):
     elif isinstance(obj, float) and (obj != obj or obj == float('inf') or obj == float('-inf')):
         # 处理特殊浮点值：NaN, Infinity, -Infinity
         return str(obj)
-    
-    elif hasattr(obj, '__dict__'):
-        # 处理自定义对象，转换为字典
-        return safe_json_serialize(obj.__dict__)
     
     else:
         # 其他类型转为字符串

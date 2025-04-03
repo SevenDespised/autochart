@@ -11,6 +11,7 @@ This schema describes the CSV files' structure, including filenames, columns, da
 Code writing instructions:
 . Use .read_csv to read files. If table names do not include extensions (.csv), add them.
 . Use the `os` module to prepend the table diretory to the file name, and the `table_dir` variable is predefined and do not redefine it.
+. Do not use pandas functions to process dates or times.
 . Output only the information directly asked in the question.
 . Make sure to return all required information without omissions or extraneous data.
 . Use the example values provided to map question keywords to correct column names.
@@ -18,7 +19,7 @@ Code writing instructions:
 . Use `.dropna(subset=[col])` before operations requiring non-null values. For calculations, consider .fillna(0) if appropriate for the context.
 . At the end of the task, determine whether sorting is required based on the problem. If the task requires sorting, only include sorting columns in the final output if explicitly requested.
 . At the end of the task, store the final dataframe in variables named `result`.
-
+. Attention, in `result`, at least two columns should be extracted for the chart.
 ###
 Question: 
 {QUESTION} 
