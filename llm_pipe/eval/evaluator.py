@@ -68,7 +68,7 @@ class Evaluator:
         n = len(test_cases)
         for i, test_case in enumerate(test_cases):
             try:
-                print(f"[{i + 1}/{n}] 正在评估测试用例...")
+                print(f"[BATCH:{batch_num}][{i + 1}/{n}] 正在评估测试用例...")
                 input_data = test_case['input']
                 expected_output = test_case['expected_output']
 
@@ -114,7 +114,7 @@ class Evaluator:
                     }
                 self.results.append(result)
             except Exception as e:
-                print(f"处理测试用例 {i} 时发生错误: {e}")
+                print(f"[BATCH:{batch_num}] 处理测试用例 {i} 时发生错误: {e}")
                 result = {
                     'status': 'error',
                     'test_case_id': i,

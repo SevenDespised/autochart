@@ -17,11 +17,12 @@ class Processor(IProcessor):
         初始化 Processor 类
         """
         self._prompt_optimizer = None
+        self._store_variable = {}
         
     @property
     def if_store_variable(self) -> bool:
         """是否在流水线中存储该组件的变量"""
-        return False
+        return True
     
     @property
     def if_post_process(self) -> bool:
@@ -40,13 +41,20 @@ class Processor(IProcessor):
         db_path = os.path.join(BASE_DIR, DB_DIR)
         tables_path = get_db_tables_path(db_path, "db_tables.json", db_id)
         schema_info = get_csv_schema(tables_path)
+        # 获取hint信息
+        describe = input_data["describe"]
+        describe = describe if describe else "None Describe"
+        ir_table = str(input_data["irrelevant_tables"])
+        ir_table = ir_table if ir_table else "None Irrelevant Tables"
+        hint = f"describe: {describe}\nirrelevant_tables: {ir_table}"
+        self._store_variable["hint"] = hint
         # 优化提示词
         self._prompt_optimizer = PromptOptimizer(masked_query, 'en')
         self._prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "1_table_selection.tpl"), 
                                     "QUESTION", 
                                     "optimized_prompt",
                                     DATABASE_SCHEMA = schema_info,
-                                    HINT = "NONE HINT",
+                                    HINT = hint,
                                     QUESTION = self._prompt_optimizer.prompt)
         
         return self._prompt_optimizer.optimized_prompt
@@ -61,4 +69,4 @@ class Processor(IProcessor):
         """
         向流水线暴露需要存储的变量，直接返回None
         """
-        return None
+        return self._store_variable

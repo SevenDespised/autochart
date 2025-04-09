@@ -42,6 +42,8 @@ class Processor(IProcessor):
         schema_info = data.get_cache("column_selection")["schema_info"]
         # 获取列选择阶段的字典
         cols = {k: v for k, v in input_data.items() if k != "chain_of_thought_reasoning"}
+        # 获取初始hint信息
+        hint = data.get_cache("table_selection")["hint"]
         # 优化提示词
         prompt_optimizer = PromptOptimizer(masked_query, 'en')
         prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "3_pandas_generation.tpl"), 
@@ -49,7 +51,7 @@ class Processor(IProcessor):
                                     "optimized_prompt",
                                     DATABASE_SCHEMA = schema_info,
                                     #TABLE_PATH = os.path.join(BASE_DIR, DB_DIR, initial_input["db_id"]),
-                                    HINT = "NONE HINT",
+                                    HINT = hint,
                                     COLS = cols,
                                     QUESTION = prompt_optimizer.prompt)
         
