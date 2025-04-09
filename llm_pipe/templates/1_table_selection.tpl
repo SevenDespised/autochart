@@ -24,6 +24,7 @@ Please respond with a JSON object structured as follows:
 ```json
 {{
   "table_names": ["TABLE1", "TABLE2", "TABLE3", ...],
+  "chain_thought": "Your chain of thought in a string."
 }}
 ```
 Ensure that table names include the file extension such as ".csv".

@@ -32,22 +32,23 @@ class Processor(IProcessor):
         """
         处理初始输入，生成表选择提示词
         """
-        # 获取输入数据中的查询文本
-        query = input_data["nl_queries"][0]
-        masked_query = mask_chart_types(query)
+        # 获取输入数据中的数据
+        table_data = input_data["x_data"] + input_data["y_data"]
+        table_data = [f"data {i}: " + str(item) for i, item in enumerate(table_data)]
+        # 列表转换为单个字符串
+        data_string = "\n".join(table_data)
         # 获取schema信息
         db_id = input_data["db_id"]
         db_path = os.path.join(BASE_DIR, DB_DIR)
         tables_path = get_db_tables_path(db_path, "db_tables.json", db_id)
         schema_info = get_csv_schema(tables_path)
         # 优化提示词
-        self._prompt_optimizer = PromptOptimizer(masked_query, 'en')
-        self._prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "table_selection.tpl"), 
-                                    "QUESTION", 
+        self._prompt_optimizer = PromptOptimizer(data_string, 'en')
+        self._prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "E_chart_classification.tpl"), 
+                                    "DATA", 
                                     "optimized_prompt",
                                     DATABASE_SCHEMA = schema_info,
-                                    HINT = "NONE HINT",
-                                    QUESTION = self._prompt_optimizer.prompt)
+                                    DATA = self._prompt_optimizer.prompt)
         
         return self._prompt_optimizer.optimized_prompt
 

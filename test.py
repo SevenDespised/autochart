@@ -3,8 +3,9 @@ import json
 import time
 import pandas as pd
 # 建立一个pandas period类型的列表
-period_list = [[pd.Period('2023-01-01')], pd.Period('2023-02-01'), pd.Period('2023-03-01')]
+n = "\\"
+t = f"我是你{n}你是我"
+print(t)
 
-# 将period_list转换为JSON安全的数据结构
-safe_period_list = safe_json_serialize(period_list)  
-print(safe_period_list)
+a = [1, 2, 3, 4, 5]
+print(str(a))

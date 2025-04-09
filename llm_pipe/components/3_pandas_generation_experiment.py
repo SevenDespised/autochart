@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 
 from ..src.core.component_interface import IProcessor
 from ..src.prompt_optimization.prompt_optimizer import PromptOptimizer
@@ -43,7 +44,7 @@ class Processor(IProcessor):
         cols = {k: v for k, v in input_data.items() if k != "chain_of_thought_reasoning"}
         # 优化提示词
         prompt_optimizer = PromptOptimizer(masked_query, 'en')
-        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "pandas_generation.tpl"), 
+        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "3_pandas_generation.tpl"), 
                                     "QUESTION", 
                                     "optimized_prompt",
                                     DATABASE_SCHEMA = schema_info,
@@ -63,9 +64,19 @@ class Processor(IProcessor):
         local_dict = {"table_dir": os.path.join(BASE_DIR, DB_DIR, self.db_id)}
         exec(code_str, globals(), local_dict)
         result = local_dict["result"]
-        # 暂存中间文件
-        result.to_csv(os.path.join(BASE_DIR, TMP_OUTPUT_DIR, "data.csv"), index=None, na_rep='nan')
-        return {"df": result}
+        
+        # 如果result是series类型，则转换为dataframe
+        if isinstance(result, pd.Series):
+            result = result.to_frame()
+        # 将dataframe按列转换为列表
+        columns_data = {}
+        for col in result.columns:
+            columns_data[col] = result[col].tolist()
+        
+        # 返回按列转换的数据
+        return {
+            "columns_data": columns_data
+        }
     
     def store_variable_in_pipeline(self) -> None:
         """

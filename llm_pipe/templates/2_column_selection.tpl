@@ -26,6 +26,7 @@ Please respond with a JSON object structured as follows:
 
 ```json
 {{
+  "chain_thought": "Your chain of thought in a string."
   "TABLE_NAME1": ["COLUMN1", "COLUMN2", ...],
   "TABLE_NAME2": ["COLUMN1", "COLUMN2", ...],
   ...

@@ -63,7 +63,10 @@ class Evaluator:
             self.results_dir = os.path.join(save_path, f"eval_results_{batch_num}")
         os.makedirs(self.results_dir, exist_ok=True)
         
+        success_count = 0
         correct_count = 0
+        hit2_count = 0
+        total_rank = 0
         total_tokens = 0
         n = len(test_cases)
         for i, test_case in enumerate(test_cases):
@@ -82,28 +85,31 @@ class Evaluator:
                 pipeline_report = self.pipeline.execute_pipeline(input_data)
                 pipeline_report['test_case_id'] = i
                 self.reports.append(pipeline_report)
-                predicted_output_dict = pipeline_report['output_data'].get("columns_data", {})
+                predicted_output = pipeline_report['output_data'].get('type', [])
 
-                # 提取字典的值列表
-                predicted_output = list(predicted_output_dict.values())
-
-                is_sorted = False if not input_data["sort"] else True
                 # 评估结果
-                is_correct = self.are_nested_lists_equal(predicted_output, expected_output, is_sorted)
-                if is_correct:
+                metrics = self.get_metrics(predicted_output, expected_output)
+                if metrics['is_correct']:
                     correct_count += 1
-                
+                if metrics['is_correct_hit2']:
+                    hit2_count += 1
+                total_rank += metrics['rank']
+
                 # 记录本次执行的token消耗
                 tokens_used = pipeline_report.get('tokens', 0)
                 total_tokens += tokens_used
                 if pipeline_report["success"]:
+                    success_count += 1
                     result = {
                         'status': 'success',
+                        'batch_num': batch_num,
                         'test_case_id': i,
                         'input': input_data,
                         'expected': expected_output,
                         'predicted': predicted_output,
-                        'correct': is_correct,
+                        'correct': metrics['is_correct'],
+                        'correct_hit2': metrics['is_correct_hit2'],
+                        'rank': metrics['rank'],
                         'execution_time': pipeline_report['execution_time'],
                         'tokens': tokens_used
                     }
@@ -114,9 +120,10 @@ class Evaluator:
                     }
                 self.results.append(result)
             except Exception as e:
-                print(f"处理测试用例 {i} 时发生错误: {e}")
+                print(f"处理测试批次 {batch_num} 用例 {i} 时发生错误: {e}")
                 result = {
                     'status': 'error',
+                    'batch_num': batch_num,
                     'test_case_id': i,
                     'error_message': str(e),
                 }
@@ -134,102 +141,25 @@ class Evaluator:
         # 计算总体评估结果
         evaluation_report = {
             'total_cases': len(test_cases),
+            'success_cases': success_count,
             'correct_cases': correct_count,
-            'accuracy': correct_count / len(test_cases) if test_cases else 0,
+            'hit2_cases': hit2_count,
+            'accuracy': correct_count / len(test_cases) if len(test_cases) > 0 else 0,
+            'hit@2': hit2_count / len(test_cases) if len(test_cases) > 0 else 0,
+            'mean_rank': total_rank / success_count if success_count > 0 else 0,
             'total_tokens': total_tokens,
+            'total_rank': total_rank,
             'results': self.results
         }   
         return evaluation_report
-    def are_nested_lists_equal(self, nested_list1, nested_list2, consider_order=False):
-        """
-        判断两个列表列表是否相等
-        
-        Args:
-            nested_list1: 第一个列表列表
-            nested_list2: 第二个列表列表  
-            consider_order: 是否考虑内部列表元素顺序
-        """
-        if len(nested_list1) != len(nested_list2):
-            return False
-    
-        def are_values_equal(val1, val2, epsilon=1e-2):
-            """判断两个值是否相等，处理数值型和字符串型的匹配"""
-            if val1 == val2:
-                return True
-            
-            # 处理数值型和字符串型的匹配（如"1"和1）
-            try:
-                float_val1 = float(val1)
-                float_val2 = float(val2)
-                # 使用容忍误差比较浮点数
-                return abs(float_val1 - float_val2) < epsilon
-            except (ValueError, TypeError):
-                return False
-
-        def are_lists_equal(list1, list2, consider_order=False):
-            """
-            判断两个值列表是否相等
-            
-            Args:
-                list1: 第一个列表
-                list2: 第二个列表
-                consider_order: 是否考虑元素顺序
-            """
-            if len(list1) != len(list2):
-                return False
-            
-            # 考虑顺序时，逐个元素比较
-            if consider_order:
-                return all(are_values_equal(a, b) for a, b in zip(list1, list2))
-            
-            items2 = list(list2)
-            for item1 in list1:
-                found = False
-                for i, item2 in enumerate(items2):
-                    if are_values_equal(item1, item2):
-                        items2.pop(i)
-                        found = True
-                        break
-                if not found:
-                    return False
-            return True
-    
-        # 列表列表元素无序，需要两两匹配
-        remaining = list(nested_list2)
-        for sublist1 in nested_list1:
-            found = False
-            for i, sublist2 in enumerate(remaining):
-                if are_lists_equal(sublist1, sublist2, consider_order):
-                    remaining.pop(i)
-                    found = True
-                    break
-            if not found:
-                return False
-        return True
 
     def evaluate_single(self, predicted_lists: List[List], actual_lists: List[List]) -> bool:
         """评估单个预测结果和实际结果"""
         return self.evaluate_lists(predicted_lists, actual_lists)
-    
-    def get_statistics(self) -> Dict:
-        """获取评估统计信息"""
-        if not self.results:
-            return {"error": "No evaluation results available"}
-        
-        total = len(self.results)
-        correct = sum(1 for result in self.results if result.get('correct', False))
-        total_tokens = sum(result.get('tokens', 0) for result in self.results)
-        
-        return {
-            'total_cases': total,
-            'correct_cases': correct,
-            'accuracy': correct / total if total > 0 else 0,
-            'total_tokens': total_tokens
-        }
 
     def save_interim_results(self, interval: int = 10, results_dir: str = None, force_save: bool = False) -> str:
         """
-        每处理n条数据保存一次中间结果，只保存当前chunk的n条数据
+        每处理n条数据保存一次中间结果
         
         Args:
             interval: 保存频率，每处理interval条数据保存一次
@@ -239,68 +169,121 @@ class Evaluator:
         Returns:
             str: 结果保存的目录路径
         """
-        # 如果没有提供目录，在当前目录创建带时间戳的results目录
+        # 初始化结果目录
         if not hasattr(self, 'results_dir') or not self.results_dir:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             self.results_dir = results_dir or os.path.join(os.getcwd(), f"eval_results_{timestamp}")
             os.makedirs(self.results_dir, exist_ok=True)
         
-        # 只有在有结果时才保存
-        if hasattr(self, 'results') and self.results:
-            # 计算当前chunk号和剩余数量
-            total_results = len(self.results)
-            current_chunk = total_results // interval
-            remainder = total_results % interval
+        # 只在有结果时保存
+        if not hasattr(self, 'results') or not self.results:
+            return self.results_dir
+        
+        # 计算当前chunk号和剩余数量
+        total_results = len(self.results)
+        current_chunk = total_results // interval
+        remainder = total_results % interval
+        
+        # 判断是否需要保存数据
+        should_save = (remainder == 0 and current_chunk > 0) or (force_save and remainder > 0)
+        
+        if should_save:
+            # 确定要保存的chunk范围
+            if remainder == 0 and current_chunk > 0:
+                # 完整chunk
+                start_idx = (current_chunk - 1) * interval
+                end_idx = current_chunk * interval
+                chunk_number = current_chunk
+            else:
+                # 不完整chunk
+                start_idx = current_chunk * interval
+                end_idx = total_results
+                chunk_number = current_chunk + 1
             
-            # 判断是否需要保存数据
-            should_save = (remainder == 0 and current_chunk > 0) or (force_save and remainder > 0)
+            # 提取当前chunk的结果
+            current_results = self.results[start_idx:end_idx]
+            current_reports = self.reports[start_idx:end_idx] if hasattr(self, 'reports') and self.reports else []
             
-            if should_save:
-                # 确定要保存的chunk范围
-                if remainder == 0 and current_chunk > 0:
-                    # 完整chunk
-                    start_idx = (current_chunk - 1) * interval
-                    end_idx = current_chunk * interval
-                    chunk_number = current_chunk
-                else:
-                    # 不完整chunk
-                    start_idx = current_chunk * interval
-                    end_idx = total_results
-                    chunk_number = current_chunk + 1
-                
-                # 提取当前chunk的结果
-                current_results = self.results[start_idx:end_idx]
-                current_reports = self.reports[start_idx:end_idx] if hasattr(self, 'reports') else []
-                
-                # 创建带有chunk号的文件名
-                filename = os.path.join(self.results_dir, f"results_chunk_{chunk_number}.json")
-                
-                # 计算当前chunk的统计信息
-                correct_cases = sum(1 for result in current_results if result.get('correct', False))
-                
-                # 创建当前chunk的评估报告
-                chunk_report = {
-                    'chunk_number': chunk_number,
-                    'chunk_size': len(current_results),
-                    'correct_cases': correct_cases,
-                    'chunk_accuracy': correct_cases / len(current_results) if current_results else 0,
-                    'overall_progress': f"{total_results} cases processed",
-                    'chunk_results': current_results,
-                    'chunk_reports': current_reports
-                }
-                
+            # 创建带有chunk号的文件名
+            filename = os.path.join(self.results_dir, f"results_chunk_{chunk_number}.json")
+            
+            # 计算当前chunk的统计信息
+            success_count = sum(1 for result in current_results if result['status'] == 'success')
+            correct_cases = sum(1 for result in current_results if result.get('correct', False))
+            correct_hit2_cases = sum(1 for result in current_results if result.get('correct_hit2', False))
+            total_rank = sum(result.get('rank', 0) for result in current_results)
+
+            total_tokens = sum(result.get('tokens', 0) for result in current_results)
+            
+            # 创建当前chunk的评估报告
+            chunk_report = {
+                'chunk_number': chunk_number,
+                'chunk_size': len(current_results),
+                'correct_cases': correct_cases,
+                'correct_hit2_cases': correct_hit2_cases,
+                'total_rank': total_rank,
+                'mean_rank': total_rank / success_count if success_count > 0 else 0,
+                'chunk_accuracy': correct_cases / len(current_results) if current_results else 0,
+                'chunk_hit2_accuracy': correct_hit2_cases / len(current_results) if current_results else 0,
+                'overall_progress': f"{total_results} cases processed",
+                'total_tokens_in_chunk': total_tokens,
+                'chunk_results': current_results,
+                'chunk_reports': current_reports
+            }
+            
+            try:
                 # 应用JSON安全序列化处理
                 safe_report = safe_json_serialize(chunk_report)
                 with open(filename, 'w', encoding='utf-8') as f:
-                    try:
-                        json.dump(safe_report, f, ensure_ascii=False, indent=2)
-                    except Exception as e:
-                        json.dump({
-                                    'chunk_number': chunk_number,
-                                    'chunk_size': len(current_results),
-                                    'correct_cases': correct_cases,
-                                    'chunk_accuracy': correct_cases / len(current_results) if current_results else 0,
-                                    'overall_progress': f"{total_results} cases processed",
-                                    'dump_error': str(e),
-                                  }, f, ensure_ascii=False, indent=2)
+                    json.dump(safe_report, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                # 如果完整报告无法保存，保存基本信息
+                basic_report = {
+                    'chunk_number': chunk_number,
+                    'chunk_size': len(current_results),
+                    'correct_cases': correct_cases,
+                    'correct_hit2_cases': correct_hit2_cases,
+                    'chunk_accuracy': correct_cases / len(current_results) if current_results else 0,
+                    'chunk_hit2_accuracy': correct_hit2_cases / len(current_results) if current_results else 0,
+                    'chunk_mean_rank': total_rank / success_count if success_count > 0 else 0,
+                    'overall_progress': f"{total_results} cases processed",
+                    'dump_error': str(e),
+                }
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(basic_report, f, ensure_ascii=False, indent=2)
+            
         return self.results_dir
+
+    def get_metrics(self, predicted_output: Union[str, List[str]], expected_output: str) -> Dict[str, Any]:
+        """
+        评估预测输出与期望输出的匹配程度
+        
+        Args:
+            predicted_output: 预测的图表类型或类型列表
+            expected_output: 期望的图表类型
+            
+        Returns:
+            Dict: 包含评估指标的字典
+        """
+        # 确保 predicted_output 是列表
+        if not isinstance(predicted_output, list) or len(predicted_output) == 0:
+            raise ValueError("预测结果为空")
+        
+        # 初始化评估指标
+        metrics = {
+            'is_correct': False,      # 第一个预测是否正确
+            'is_correct_hit2': False, # 前两个预测中是否包含正确答案
+            'rank': len(predicted_output) + 1,  # 正确答案的排名，默认设为最大值+1
+        }
+        
+        # 寻找正确答案在预测列表中的位置
+        for i, prediction in enumerate(predicted_output):
+            if prediction == expected_output:
+                metrics['rank'] = i + 1
+                if i == 0:
+                    metrics['is_correct'] = True
+                if i < 2:
+                    metrics['is_correct_hit2'] = True
+                break
+        
+        return metrics
