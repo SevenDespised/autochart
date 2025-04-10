@@ -40,7 +40,7 @@ class Processor(IProcessor):
         # 获取表选择阶段的schema信息
         schema_info = data.get_cache("column_selection")["schema_info"]
         # 获取列选择阶段的字典
-        cols = {k: v for k, v in input_data.items() if k != "chain_of_thought_reasoning"}
+        cols = {k: v for k, v in input_data.items() if k != "chain_thought"}
         # 获取初始hint信息
         hint = data.get_cache("table_selection")["hint"]
         # 优化提示词
