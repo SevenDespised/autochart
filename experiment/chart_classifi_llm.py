@@ -10,8 +10,7 @@ root_dir = current_dir.parent
 sys.path.insert(0, str(root_dir))
 
 from llm_pipe.eval.chart_evaluator import Evaluator
-from llm_pipe.utils.data_preprocess import extract_key_values
-from llm_pipe.utils.data_preprocess import safe_json_serialize
+from llm_pipe.utils.data_preprocess import extract_key_values, safe_json_serialize
 
 # 设置并行处理的进程数
 NUM_PROCESSES = 5

@@ -94,7 +94,7 @@ class PipelineProcessor:
                             "model": stage.get('client_name', self.default_client_name),
                             "prompt": prompt,
                             "raw_response": response['content'],
-                            "parsed_output": parsed,
+                            "stage_output": current_output,
                             "status": "success",
                             "tokens": response.get('tokens', 0)
                         }

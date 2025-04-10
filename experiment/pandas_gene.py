@@ -11,17 +11,19 @@ current_dir = Path(__file__).parent
 root_dir = current_dir.parent
 sys.path.insert(0, str(root_dir))
 
-from llm_pipe.eval.evaluator import Evaluator
+from llm_pipe.eval.pandas_evaluator import Evaluator
 from llm_pipe.utils.data_preprocess import extract_key_values
 from llm_pipe.utils.data_preprocess import safe_json_serialize
 
 # 设置并行处理的进程数
 NUM_PROCESSES = 5
+# 设置评估的测试用例数量
+LIMIT = -1
 # 配置路径
 BASE_DIR = ""
-DATA_DIR = "data/visEval_dataset/visEval_clear.json"
+DATA_DIR = "data/visEval_dataset/visEval_with_tables_columns.json"
 #DATA_DIR = "data/visEval_dataset/visEval.json"
-CONF_DIR = "llm_pipe/config/experiment_pandas_gene.json"
+CONF_DIR = "llm_pipe/config/experiment_ds_pandas_gene.json"
 REPORT_DIR = "experiment_res/evaluation_report.json"
 EXPERIMENT_DIR = "experiment_res/"
 
@@ -49,12 +51,12 @@ def main():
     data = extract_key_values(
         list(json_data.values()), 
         ["nl_queries", "db_id", "describe", "irrelevant_tables", "hardness", "sort"], 
-        ["x_data", "y_data", "chart"]
+        ["x_data", "y_data", "chart", "tables", "columns"]
     )
     
     # 准备测试用例
     test_cases = []
-    limit = -1
+    limit = LIMIT
     
     for i, item in enumerate(data):
         if i >= limit and limit >= 0:
@@ -63,7 +65,7 @@ def main():
         # 构建测试用例
         test_case = {
             'input': item["x_data"],
-            'expected_output': item["y_data"]["x_data"] + item["y_data"]["y_data"]
+            'expected_output': item["y_data"]
         }
         test_cases.append(test_case)
     
@@ -96,11 +98,25 @@ def main():
     # 合并结果
     evaluation_report = {
         'total_cases': 0,
+        'evaluation': {
+            "final":{
+                'correct_cases': 0,
+                'accuracy': 0,
+            },
+            "table": {
+                'correct_cases': 0,
+                'accuracy': 0,
+            },
+            "column": {
+                'correct_cases': 0,
+                'accuracy': 0,
+            }
+        },
         'correct_cases': 0,
         'accuracy': 0,
         'total_tokens': 0,
         'results': []
-    }
+    }   
     
     for batch_result in results:
         # 合并评估报告
@@ -108,11 +124,16 @@ def main():
         evaluation_report['total_cases'] += batch_result['total_cases']
         evaluation_report['correct_cases'] += batch_result['correct_cases']
         evaluation_report['total_tokens'] += batch_result['total_tokens']
+        evaluation_report['evaluation']['final']['correct_cases'] += batch_result['evaluation']['final']['correct_cases']
+        evaluation_report['evaluation']['table']['correct_cases'] += batch_result['evaluation']['table']['correct_cases']
+        evaluation_report['evaluation']['column']['correct_cases'] += batch_result['evaluation']['column']['correct_cases']
 
     # 计算准确率
     if evaluation_report['total_cases'] > 0:
         evaluation_report['accuracy'] = evaluation_report['correct_cases'] / evaluation_report['total_cases']
-
+        evaluation_report['evaluation']['final']['accuracy'] = evaluation_report['evaluation']['final']['correct_cases'] / evaluation_report['total_cases']
+        evaluation_report['evaluation']['table']['accuracy'] = evaluation_report['evaluation']['table']['correct_cases'] / evaluation_report['total_cases']
+        evaluation_report['evaluation']['column']['accuracy'] = evaluation_report['evaluation']['column']['correct_cases'] / evaluation_report['total_cases']
     
     end_time = time.time()
     print(f"并行评估完成，耗时: {end_time - start_time:.2f} 秒")

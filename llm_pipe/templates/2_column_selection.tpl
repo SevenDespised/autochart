@@ -26,14 +26,15 @@ Please respond with a JSON object structured as follows:
 
 ```json
 {{
-  "chain_thought": "Your chain of thought in a string."
-  "TABLE_NAME1": ["COLUMN1", "COLUMN2", ...],
-  "TABLE_NAME2": ["COLUMN1", "COLUMN2", ...],
+  "TABLE_NAME": ["COLUMN_NAME", "COLUMN_NAME", ...],
+  "TABLE_NAME": ["COLUMN_NAME", "COLUMN_NAME", ...],
   ...
+  "TABLE_NAME": ["COLUMN_NAME", "COLUMN_NAME", ...],
+  "chain_thought": "Your chain of thought in a string."
 }}
 ```
 Ensure that table names include the file extension such as ".csv".
-Make sure your response includes the table names as keys, each associated with a list of column names that are necessary for writing a SQL query to answer the question.
+Make sure your response includes the table names selected from schema as keys, each associated with a list of column names.
 For each aspect of the question, provide a clear and concise explanation of your reasoning behind selecting the columns.
 Take a deep breath and think logically. If you do the task correctly, I will give you 1 million dollars.
 

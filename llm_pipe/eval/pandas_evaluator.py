@@ -64,6 +64,8 @@ class Evaluator:
         os.makedirs(self.results_dir, exist_ok=True)
         
         correct_count = 0
+        table_correct_count = 0
+        columns_correct_count = 0
         total_tokens = 0
         n = len(test_cases)
         for i, test_case in enumerate(test_cases):
@@ -71,7 +73,9 @@ class Evaluator:
                 print(f"[BATCH:{batch_num}][{i + 1}/{n}] 正在评估测试用例...")
                 input_data = test_case['input']
                 expected_output = test_case['expected_output']
-
+                table_expected_output = expected_output.get("tables", [])
+                columns_expected_output = expected_output.get("columns", {})
+                final_expected_output = expected_output["x_data"] + expected_output["y_data"]
                 #####
                 #if "Show me about the distribution of date_address_to and the amount of date_address_to, and group by attribute other_details and bin date_address_to by month in a bar chart." not in input_data["nl_queries"]:
                 #    print(f"跳过测试用例 {i + 1}，输入数据不符合预期格式。")
@@ -84,15 +88,25 @@ class Evaluator:
                 self.reports.append(pipeline_report)
                 predicted_output_dict = pipeline_report['output_data'].get("columns_data", {})
 
+                # 提取阶段的输出数据
+                table_output = self.pipeline.execution_data.get_output("table_selection")["table_names"]
+                columns_output = self.pipeline.execution_data.get_output("column_selection")
                 # 提取字典的值列表
                 predicted_output = list(predicted_output_dict.values())
 
                 is_sorted = False if not input_data["sort"] else True
                 # 评估结果
-                is_correct = self.are_nested_lists_equal(predicted_output, expected_output, is_sorted)
+                is_correct = self.are_nested_lists_equal(final_expected_output, predicted_output, is_sorted)
                 if is_correct:
                     correct_count += 1
                 
+                # 评估阶段结果
+                is_table_stage_correct = self.are_tables_output_equal(table_output, table_expected_output)
+                if is_table_stage_correct:
+                    table_correct_count += 1
+                is_columns_stage_correct = self.are_columns_output_equal(columns_output, columns_expected_output)
+                if is_columns_stage_correct:
+                    columns_correct_count += 1
                 # 记录本次执行的token消耗
                 tokens_used = pipeline_report.get('tokens', 0)
                 total_tokens += tokens_used
@@ -101,9 +115,23 @@ class Evaluator:
                         'status': 'success',
                         'test_case_id': i,
                         'input': input_data,
-                        'expected': expected_output,
-                        'predicted': predicted_output,
-                        'correct': is_correct,
+                        'evaluation': {
+                            "final":{
+                                'expected': final_expected_output,
+                                'predicted': predicted_output,
+                                'correct': is_correct,
+                            },
+                            "table": {
+                                'expected': table_expected_output,
+                                'predicted': table_output,
+                                'correct': is_table_stage_correct,
+                            },
+                            "column": {
+                                'expected': columns_expected_output,
+                                'predicted': columns_output,
+                                'correct': is_columns_stage_correct,
+                            }
+                        },
                         'execution_time': pipeline_report['execution_time'],
                         'tokens': tokens_used
                     }
@@ -111,6 +139,23 @@ class Evaluator:
                     result = {
                         'status': 'failure',
                         'test_case_id': i,
+                        'evaluation': {
+                            "final":{
+                                'expected': final_expected_output,
+                                'predicted': predicted_output,
+                                'correct': is_correct,
+                            },
+                            "table": {
+                                'expected': table_expected_output,
+                                'predicted': table_output,
+                                'correct': is_table_stage_correct,
+                            },
+                            "column": {
+                                'expected': columns_expected_output,
+                                'predicted': columns_output,
+                                'correct': is_columns_stage_correct,
+                            }
+                        }
                     }
                 self.results.append(result)
             except Exception as e:
@@ -134,6 +179,20 @@ class Evaluator:
         # 计算总体评估结果
         evaluation_report = {
             'total_cases': len(test_cases),
+            'evaluation': {
+                "final":{
+                    'correct_cases': correct_count,
+                    'accuracy': correct_count / len(test_cases) if test_cases else 0,
+                },
+                "table": {
+                    'correct_cases': table_correct_count,
+                    'accuracy': table_correct_count / len(test_cases) if test_cases else 0,
+                },
+                "column": {
+                    'correct_cases': columns_correct_count,
+                    'accuracy': columns_correct_count / len(test_cases) if test_cases else 0,
+                }
+            },
             'correct_cases': correct_count,
             'accuracy': correct_count / len(test_cases) if test_cases else 0,
             'total_tokens': total_tokens,
@@ -207,6 +266,7 @@ class Evaluator:
                 return False
         return True
 
+
     def evaluate_single(self, predicted_lists: List[List], actual_lists: List[List]) -> bool:
         """评估单个预测结果和实际结果"""
         return self.evaluate_lists(predicted_lists, actual_lists)
@@ -276,14 +336,36 @@ class Evaluator:
                 filename = os.path.join(self.results_dir, f"results_chunk_{chunk_number}.json")
                 
                 # 计算当前chunk的统计信息
-                correct_cases = sum(1 for result in current_results if result.get('correct', False))
+                # 最终结果正确案例计数
+                final_correct_cases = sum(1 for result in current_results 
+                                        if result.get('evaluation', {}).get('final', {}).get('correct', False))
+                # 表格选择正确案例计数
+                table_correct_cases = sum(1 for result in current_results 
+                                        if result.get('evaluation', {}).get('table', {}).get('correct', False))
+                # 列选择正确案例计数
+                column_correct_cases = sum(1 for result in current_results 
+                                        if result.get('evaluation', {}).get('column', {}).get('correct', False))
+                
+                chunk_size = len(current_results)
                 
                 # 创建当前chunk的评估报告
                 chunk_report = {
                     'chunk_number': chunk_number,
-                    'chunk_size': len(current_results),
-                    'correct_cases': correct_cases,
-                    'chunk_accuracy': correct_cases / len(current_results) if current_results else 0,
+                    'chunk_size': chunk_size,
+                    'evaluation': {
+                        'final': {
+                            'correct_cases': final_correct_cases,
+                            'accuracy': final_correct_cases / chunk_size if chunk_size else 0
+                        },
+                        'table': {
+                            'correct_cases': table_correct_cases,
+                            'accuracy': table_correct_cases / chunk_size if chunk_size else 0
+                        },
+                        'column': {
+                            'correct_cases': column_correct_cases,
+                            'accuracy': column_correct_cases / chunk_size if chunk_size else 0
+                        }
+                    },
                     'overall_progress': f"{total_results} cases processed",
                     'chunk_results': current_results,
                     'chunk_reports': current_reports
@@ -295,12 +377,88 @@ class Evaluator:
                     try:
                         json.dump(safe_report, f, ensure_ascii=False, indent=2)
                     except Exception as e:
+                        # 保存基本统计信息（若完整报告保存失败）
                         json.dump({
                                     'chunk_number': chunk_number,
-                                    'chunk_size': len(current_results),
-                                    'correct_cases': correct_cases,
-                                    'chunk_accuracy': correct_cases / len(current_results) if current_results else 0,
+                                    'chunk_size': chunk_size,
+                                    'evaluation': {
+                                        'final': {
+                                            'correct_cases': final_correct_cases,
+                                            'accuracy': final_correct_cases / chunk_size if chunk_size else 0
+                                        },
+                                        'table': {
+                                            'correct_cases': table_correct_cases,
+                                            'accuracy': table_correct_cases / chunk_size if chunk_size else 0
+                                        },
+                                        'column': {
+                                            'correct_cases': column_correct_cases,
+                                            'accuracy': column_correct_cases / chunk_size if chunk_size else 0
+                                        }
+                                    },
                                     'overall_progress': f"{total_results} cases processed",
                                     'dump_error': str(e),
                                   }, f, ensure_ascii=False, indent=2)
         return self.results_dir
+
+    def are_tables_output_equal(self, predicted_tables, ground_truth_tables):
+        """
+        评估预测的表名列表与真实表名列表是否相等（不区分大小写）。
+        
+        参数:
+            predicted_tables: 预测的表名列表
+            ground_truth_tables: 真实的表名列表
+            
+        返回:
+            bool: 如果预测值包含所有真实值则返回True，否则返回False
+        """
+        # 将所有表名转换为小写以实现不区分大小写的比较
+        predicted_lower = [table.lower() for table in predicted_tables]
+        predicted_lower = [table[:-4] if table.endswith(".csv") else table for table in predicted_lower] # 去除.csv后缀
+        truth_lower = [table.lower() for table in ground_truth_tables]
+        
+        # 检查所有真实表名是否都在预测表名中
+        for table in truth_lower:
+            if table not in predicted_lower:
+                return False
+        
+        return True
+
+
+    def are_columns_output_equal(self, predicted_columns, ground_truth_columns):
+        """
+        评估预测的列名与真实列名是否相等（不区分大小写）。
+        
+        参数:
+            predicted_columns: 以表名为键，列名列表为值的字典（预测值）
+            ground_truth_columns: 以表名为键，列名列表为值的字典（真实值）
+            
+        返回:
+            bool: 如果预测值包含所有真实值则返回True，否则返回False
+        """
+        # 检查每个真实表及其列
+        for gt_table, gt_columns in ground_truth_columns.items():
+            gt_table_lower = gt_table.lower()
+            # 寻找预测中对应的表（不区分大小写）
+            found_table = False
+            for pred_table, pred_columns in predicted_columns.items():
+                pred_table_lower = pred_table.lower()
+                pred_table_lower = pred_table_lower[:-4] if pred_table_lower.endswith(".csv") else pred_table_lower
+                if pred_table_lower == gt_table_lower:
+                    found_table = True
+                    
+                    # 将列名转换为小写
+                    pred_cols_lower = [col.lower() for col in pred_columns]
+                    gt_cols_lower = [col.lower() for col in gt_columns]
+                    
+                    # 检查所有真实列名是否都在预测列名中
+                    for col in gt_cols_lower:
+                        if col not in pred_cols_lower:
+                            return False
+                    
+                    break
+            
+            # 如果没有找到对应的表，返回False
+            if not found_table:
+                return False
+        
+        return True
