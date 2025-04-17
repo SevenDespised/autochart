@@ -7,22 +7,23 @@ def load_data_nl2chart(data_file_name = '../data/preserved_data/raw_data_all.csv
         data = json.load(file)
     return data
 
-def data_format_trans(data):
+def data_format_trans(data, fid):
     res = {}
     order = 0
     type = data['chart']
     for x in data['x_data']:
-        res['x:' + str(order)] = {}
-        res['x:' + str(order)]['uid'] = 'x#' + str(order)
-        res['x:' + str(order)]['order'] = order
-        res['x:' + str(order)]['data'] = [a for a in x]
+        res[fid + str(order)] = {}
+        res[fid + str(order)]['uid'] = fid + str(order)
+        res[fid + str(order)]['order'] = order
+        res[fid + str(order)]['data'] = [a for a in x]
+        res[fid + str(order)]['is_x_or_y'] = 'x'
         order += 1
-    order = 0
     for y in data['y_data']:
-        res['y:' + str(order)] = {}
-        res['y:' + str(order)]['uid'] = 'y#' + str(order)
-        res['y:' + str(order)]['order'] = order
-        res['y:' + str(order)]['data'] = [a for a in y]
+        res[fid + str(order)] = {}
+        res[fid + str(order)]['uid'] = fid + str(order)
+        res[fid + str(order)]['order'] = order
+        res[fid + str(order)]['data'] = [a for a in y]
+        res[fid + str(order)]['is_x_or_y'] = 'y'
         order += 1
     return res
     

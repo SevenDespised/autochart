@@ -23,7 +23,8 @@ LIMIT = -1
 BASE_DIR = ""
 DATA_DIR = "data/visEval_dataset/visEval_with_tables_columns.json"
 #DATA_DIR = "data/visEval_dataset/visEval.json"
-CONF_DIR = "llm_pipe/config/experiment_ds_pandas_gene.json"
+#CONF_DIR = "llm_pipe/config/experiment_ds_pandas_gene.json"
+CONF_DIR = "llm_pipe/config/experiment_pandas_gene.json"
 REPORT_DIR = "experiment_res/evaluation_report.json"
 EXPERIMENT_DIR = "experiment_res/"
 

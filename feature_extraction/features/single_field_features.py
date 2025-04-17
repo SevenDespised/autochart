@@ -354,6 +354,11 @@ def extract_single_field_features(fields, fid, timeout=15, MAX_FIELDS=10, num_fi
 
         if field_name == "":
             field_name = " "
+
+        is_x_or_y = d.get('is_x_or_y', False)
+        if is_x_or_y is not False:
+            all_field_features[i]['is_x_or_y'] = is_x_or_y
+        
         all_field_features[i]['fid'] = fid
         all_field_features[i]['field_id'] = '{}:{}'.format(
             fid.split(':')[0] if fid else None, field_id)

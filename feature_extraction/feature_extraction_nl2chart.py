@@ -66,7 +66,7 @@ def extract_features(data, chunk_size):
                   (i % chunk_size + 1, i, time() - start_time, 'dataid:{}, database id:{}'.format(fid, table_data["db_id"])))
         vis_obj = table_data["vis_obj"]
 
-        data_converted = data_format_trans(vis_obj)
+        data_converted = data_format_trans(vis_obj, fid)
         num_fields = len(data_converted)
         try:
             extraction_results = extract_features_from_fields(data_converted.items(), fid=fid, num_fields=num_fields)
@@ -91,15 +91,15 @@ def write_batch_results(batch_results, features_dir_name, write_header=False):
     }
     
     for (k, v) in concatenated_results.items():
-        output_file_name = os.path.join(features_dir_name, "py12nl2chart_" + f"{k}.csv")
-        v.to_csv(output_file_name, mode='a', index=False, header=write_header)
+        output_file_name = os.path.join(features_dir_name, "fix_nl2chart_" + f"{k}.csv")
+        v.to_csv(output_file_name, mode='w', index=False, header=write_header)
 
 
 # In[6]:
 
 
 #base_dir = "../"
-data = load_data_nl2chart(data_file_name = base_dir + f"data/visEval_dataset/visEval.json")
+data = load_data_nl2chart(data_file_name = base_dir + f"data/visEval_dataset/visEval_clear.json")
 if not os.path.exists(os.path.join(base_dir, 'features')):
     os.mkdir(os.path.join(base_dir, 'features'))
 
@@ -119,7 +119,7 @@ write_batch_results(res, features_dir_name = features_dir_name, write_header = T
 
 
 
-df_f = pd.read_csv(base_dir + f"features/nl2chart_field_level_features_df.csv")
+df_f = pd.read_csv(base_dir + f"features/fix_nl2chart_field_level_features_df.csv")
 df_f_dedup = df_f.drop_duplicates('field_id')
 df_f_dedup_clean = df_f_dedup[df_f_dedup['exists']!='exists']
  
@@ -131,11 +131,8 @@ with open("feature_extraction/feature_list_float_bool.pkl", 'rb') as f:
 
 def get_chart_type(fid):
     return data[fid]['chart']
-def get_is_x_or_y(filed_id):
-    return filed_id.split(':')[1].split('#')[0]
 
 df_f_dedup_clean['trace_type'] = df_f_dedup_clean['fid'].apply(get_chart_type)
-df_f_dedup_clean['is_x_or_y'] = df_f_dedup_clean['field_id'].apply(get_is_x_or_y)
 list_dataset_split = train_test_split(df_f_dedup_clean, train_size=0.7, test_size=0.3)
 df_train, df_test    = list_dataset_split[0], list_dataset_split[1]
 
@@ -173,6 +170,6 @@ for i in feature_list['float']:
 with open("feature_extraction/nl2chart_dict_cut_off.pkl", 'wb') as f:
     pickle.dump(dict_cut_off, f)
 
-df_train.to_csv((base_dir + f"features/py12nl2chart_feature_train.csv"), index=False)
-df_test.to_csv((base_dir + f"features/py12nl2chart_feature_test.csv"), index=False)
+df_train.to_csv((base_dir + f"features/fix_nl2chart_feature_train.csv"), index=False)
+df_test.to_csv((base_dir + f"features/fix_nl2chart_feature_test.csv"), index=False)
 

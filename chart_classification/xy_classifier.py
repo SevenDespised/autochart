@@ -18,8 +18,8 @@ from data_utils import load_dataset, preprocess_data, create_encode_mapping, loa
 from logger_setup import get_logger
 
 
-class ChartClassifier:
-    """图表分类模型，使用LightGBM实现"""
+class AxisClassifier:
+    """轴线分类模型，使用LightGBM实现"""
     
     def __init__(self, config_path: Optional[str] = None):
         """初始化分类器
@@ -30,7 +30,7 @@ class ChartClassifier:
         # 加载配置
         self.config = load_config(config_path)
         self.paths = self.config['paths']
-        self.params = self.config['model_params']
+        self.params = self.config['xy_model_params']
         self.training_config = self.config['training']
         
         # 设置回调函数
@@ -40,7 +40,7 @@ class ChartClassifier:
         self.logger = self._setup_logger()
         
         # 加载图表类型映射
-        self.chart_type_mapping = None
+        self.xy_mapping = None
         
     def _setup_logger(self) -> logging.Logger:
         """设置日志"""
@@ -63,7 +63,7 @@ class ChartClassifier:
         
         # 预处理数据 - 使用导入的函数
         X, Y = preprocess_data(X, Y)
-        Y = Y['trace_type']
+        Y = Y['is_x_or_y']
         # 分割训练集和验证集
         x_train, x_val, y_train, y_val = train_test_split(
             X, Y, 
@@ -90,10 +90,11 @@ class ChartClassifier:
             self.logger.info(f"模型已保存至: {model_path}")
             
             # 生成并保存图表类型映射
-            mapping_path = os.path.join(self.paths['output'], 'chart_type_mapping.pkl')
-            self.chart_type_mapping = create_encode_mapping(
+            mapping_path = os.path.join(self.paths['output'], 'xy_mapping.pkl')
+            self.xy_mapping = create_encode_mapping(
                 train_path=data_path,
                 output_path=mapping_path,
+                which_map='is_x_or_y',
                 logger=self.logger
             )
         
@@ -131,10 +132,10 @@ class ChartClassifier:
         if truth_data is not None and return_metrics:
             # 对真实标签进行编码
             le = LabelEncoder()
-            y_true = le.fit_transform(truth_data['trace_type'].astype('str'))
+            y_true = le.fit_transform(truth_data['is_x_or_y'].astype('str'))
             metrics = self.calculate_metrics(y_pred, y_true)
             self.logger.info(f"评估指标: {metrics}")
-            self.logger.debug(f"特征重要性: {model.feature_importance()}")
+            self.logger.info(f"特征重要性: {model.feature_importance()}")
             
         # 返回预测类别
         y_pred_class = np.argmax(y_pred, axis=1)
@@ -185,14 +186,14 @@ class ChartClassifier:
         y_pred_idx = np.argmax(y_pred_proba, axis=1)
         
         # 获取图表类型映射
-        if self.chart_type_mapping is None:
-            self.load_chart_type_mapping()
+        if self.xy_mapping is None:
+            self.load_xy_mapping()
         
         # 将预测索引转换为图表类型
         predicted_types = []
         for idx in y_pred_idx:
             # 如果索引存在于映射中，使用映射的类型，否则使用"unknown"
-            predicted_types.append(self.chart_type_mapping.get(idx, "unknown"))
+            predicted_types.append(self.xy_mapping.get(idx, "unknown"))
         
         # 创建结果DataFrame
         results = pd.DataFrame({
@@ -205,7 +206,7 @@ class ChartClassifier:
         # 添加前两个最可能的类型及其概率
         for i in range(len(results)):
             top_indices = np.argsort(-y_pred_proba[i])[:2]
-            top_types = [self.chart_type_mapping.get(idx, "unknown") for idx in top_indices]
+            top_types = [self.xy_mapping.get(idx, "unknown") for idx in top_indices]
             top_probs = [y_pred_proba[i][idx] for idx in top_indices]
             
             results.loc[i, 'top1_type'] = top_types[0]
@@ -222,8 +223,8 @@ class ChartClassifier:
         
         return results
     
-    def create_chart_type_mapping(self, train_path: Optional[str] = None) -> Dict[int, str]:
-        """创建并保存图表类型映射
+    def create_xy_mapping(self, train_path: Optional[str] = None, mapping_name: str = 'xy_mapping.pkl') -> Dict[int, str]:
+        """创建并保存xy映射
         
         Args:
             train_path: 训练数据路径，默认使用配置中的训练路径
@@ -234,34 +235,35 @@ class ChartClassifier:
         if train_path is None:
             train_path = self.paths['train']
         
-        mapping_path = os.path.join(self.paths['output'], 'chart_type_mapping.pkl')
-        self.chart_type_mapping = create_encode_mapping(
+        mapping_path = os.path.join(self.paths['output'], mapping_name)
+        self.xy_mapping = create_encode_mapping(
             train_path=train_path,
             output_path=mapping_path,
-            logger=self.logger
+            logger=self.logger,
+            which_map='is_x_or_y'
         )
-        return self.chart_type_mapping
+        return self.xy_mapping
     
-    def load_chart_type_mapping(self) -> Dict[int, str]:
-        """加载图表类型映射
+    def load_xy_mapping(self, mapping_name: str = 'xy_mapping.pkl') -> Dict[int, str]:
+        """加载xy编码映射
         
         Returns:
             映射字典 {索引: 图表类型}
         """
-        mapping_path = os.path.join(self.paths['output'], 'chart_type_mapping.pkl')
+        mapping_path = os.path.join(self.paths['output'], mapping_name)
         try:
-            self.chart_type_mapping = load_encode_mapping(
+            self.xy_mapping = load_encode_mapping(
                 mapping_path=mapping_path,
                 train_path=self.paths['train'],
                 output_dir=self.paths['output'],
                 logger=self.logger
             )
         except Exception as e:
-            self.logger.error(f"加载图表类型映射失败: {e}")
-            self.logger.info("正在重新创建图表类型映射...")
-            self.chart_type_mapping = self.create_chart_type_mapping()
+            self.logger.error(f"加载轴线编码映射失败: {e}")
+            self.logger.info("正在重新创建轴线编码映射...")
+            self.xy_mapping = self.create_xy_mapping()
         
-        return self.chart_type_mapping
+        return self.xy_mapping
     
     def parameter_search(self, param_key: str, start: float, end: float, step: float) -> Dict[float, Dict[str, float]]:
         """参数搜索
@@ -353,16 +355,16 @@ class ChartClassifier:
         """生成模型名称"""
         timestamp = datetime.now().strftime("%m%d%H%M%S")
         param_str = f"leave_{self.params.get('num_leaves', 'NA')}_tree_{self.params.get('num_trees', 'NA')}_"
-        return f"py12_model_{param_str}{timestamp}.txt"
+        return f"py12_axis_model_{param_str}{timestamp}.txt"
 
 
 if __name__ == "__main__":
     # 创建分类器实例
-    classifier = ChartClassifier()
+    classifier = AxisClassifier()
     
     # 参数搜索示例
     # classifier.parameter_search(
-    #     param_key="num_trees",
+    #     param_key='min_child_samples',
     #     start=10,
     #     end=110,
     #     step=10

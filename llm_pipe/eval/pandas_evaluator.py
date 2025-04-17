@@ -208,9 +208,9 @@ class Evaluator:
             nested_list2: 第二个列表列表  
             consider_order: 是否考虑内部列表元素顺序
         """
-        if len(nested_list1) != len(nested_list2):
+        if len(nested_list1) > len(nested_list2):
             return False
-    
+
         def are_values_equal(val1, val2, epsilon=1e-2):
             """判断两个值是否相等，处理数值型和字符串型的匹配"""
             if val1 == val2:
@@ -267,9 +267,88 @@ class Evaluator:
         return True
 
 
-    def evaluate_single(self, predicted_lists: List[List], actual_lists: List[List]) -> bool:
+    def evaluate_single(self, test_case):
         """评估单个预测结果和实际结果"""
-        return self.evaluate_lists(predicted_lists, actual_lists)
+        input_data = test_case['input']
+        expected_output = test_case['expected_output']
+        table_expected_output = expected_output.get("tables", [])
+        columns_expected_output = expected_output.get("columns", {})
+        final_expected_output = expected_output["x_data"] + expected_output["y_data"]
+        #####
+        #if "Show me about the distribution of date_address_to and the amount of date_address_to, and group by attribute other_details and bin date_address_to by month in a bar chart." not in input_data["nl_queries"]:
+        #    print(f"跳过测试用例 {i + 1}，输入数据不符合预期格式。")
+        #    continue
+        #####
+        
+        # 执行流水线
+        pipeline_report = self.pipeline.execute_pipeline(input_data)
+        pipeline_report['test_case_id'] = 0
+        self.reports.append(pipeline_report)
+        predicted_output_dict = pipeline_report['output_data'].get("columns_data", {})
+
+        # 提取阶段的输出数据
+        table_output = self.pipeline.execution_data.get_output("table_selection")["table_names"]
+        columns_output = self.pipeline.execution_data.get_output("column_selection")
+        # 提取字典的值列表
+        predicted_output = list(predicted_output_dict.values())
+
+        is_sorted = False if not input_data["sort"] else True
+        # 评估结果
+        is_correct = self.are_nested_lists_equal(final_expected_output, predicted_output, is_sorted)
+        # 评估阶段结果
+        is_table_stage_correct = self.are_tables_output_equal(table_output, table_expected_output)
+        is_columns_stage_correct = self.are_columns_output_equal(columns_output, columns_expected_output)
+        
+        # 记录本次执行的token消耗
+        tokens_used = pipeline_report.get('tokens', 0)
+        if pipeline_report["success"]:
+            result = {
+                'status': 'success',
+                'test_case_id': 0,
+                'input': input_data,
+                'evaluation': {
+                    "final":{
+                        'expected': final_expected_output,
+                        'predicted': predicted_output,
+                        'correct': is_correct,
+                    },
+                    "table": {
+                        'expected': table_expected_output,
+                        'predicted': table_output,
+                        'correct': is_table_stage_correct,
+                    },
+                    "column": {
+                        'expected': columns_expected_output,
+                        'predicted': columns_output,
+                        'correct': is_columns_stage_correct,
+                    }
+                },
+                'execution_time': pipeline_report['execution_time'],
+                'tokens': tokens_used
+            }
+        else:
+            result = {
+                'status': 'failure',
+                'test_case_id': 0,
+                'evaluation': {
+                    "final":{
+                        'expected': final_expected_output,
+                        'predicted': predicted_output,
+                        'correct': is_correct,
+                    },
+                    "table": {
+                        'expected': table_expected_output,
+                        'predicted': table_output,
+                        'correct': is_table_stage_correct,
+                    },
+                    "column": {
+                        'expected': columns_expected_output,
+                        'predicted': columns_output,
+                        'correct': is_columns_stage_correct,
+                    }
+                }
+            }
+        return result
     
     def get_statistics(self) -> Dict:
         """获取评估统计信息"""

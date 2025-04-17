@@ -62,10 +62,10 @@ def preprocess_data(X: pd.DataFrame, Y: pd.DataFrame) -> Tuple[pd.DataFrame, np.
     
     # 这里可以添加更多特征工程步骤
     
-    return X, Y_processed['trace_type']
+    return X, Y_processed
 
-def create_chart_type_mapping(train_path: str, output_path: str, logger=None) -> Dict[int, str]:
-    """创建并保存图表类型映射
+def create_encode_mapping(train_path: str, output_path: str, which_map: str="trace_type", logger=None) -> Dict[int, str]:
+    """创建并保存索引与值的映射
     
     Args:
         train_path: 训练数据路径
@@ -73,18 +73,18 @@ def create_chart_type_mapping(train_path: str, output_path: str, logger=None) ->
         logger: 可选的日志记录器
         
     Returns:
-        映射字典 {索引: 图表类型}
+        映射字典 {索引: 对应值}
     """
     if logger:
-        logger.info("创建图表类型映射...")
+        logger.info("创建编码映射...")
     else:
-        print("创建图表类型映射...")
+        print("创建编码映射...")
     
     # 加载训练数据
     _, truth_data = load_dataset(train_path)
     
-    # 获取唯一图表类型
-    unique_chart_types = truth_data['trace_type'].unique()
+    # 获取唯一编码
+    unique_chart_types = truth_data[which_map].unique()
     
     # 创建编码器并拟合
     le = LabelEncoder()
@@ -99,21 +99,21 @@ def create_chart_type_mapping(train_path: str, output_path: str, logger=None) ->
         pickle.dump(mapping, f)
     
     if logger:
-        logger.info(f"图表类型映射已保存到: {output_path}")
-        logger.debug("图表类型映射内容:")
+        logger.info(f"编码映射已保存到: {output_path}")
+        logger.debug("编码映射内容:")
         for idx, chart_type in sorted(mapping.items()):
             logger.debug(f"  {idx}: {chart_type}")
     else:
-        print(f"图表类型映射已保存到: {output_path}")
-        print("图表类型映射内容:")
+        print(f"编码已保存到: {output_path}")
+        print("编码映射内容:")
         for idx, chart_type in sorted(mapping.items()):
             print(f"  {idx}: {chart_type}")
     
     return mapping
 
-def load_chart_type_mapping(mapping_path: str, train_path: Optional[str] = None, 
+def load_encode_mapping(mapping_path: str, train_path: Optional[str] = None, 
                             output_dir: Optional[str] = None, logger=None) -> Dict[int, str]:
-    """加载图表类型映射
+    """加载编码映射
     
     Args:
         mapping_path: 映射文件路径
@@ -122,7 +122,7 @@ def load_chart_type_mapping(mapping_path: str, train_path: Optional[str] = None,
         logger: 可选的日志记录器
         
     Returns:
-        映射字典 {索引: 图表类型}
+        映射字典 {索引: 编码值}
     """
     if os.path.exists(mapping_path):
         try:
