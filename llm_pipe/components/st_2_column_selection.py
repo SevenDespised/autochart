@@ -1,0 +1,72 @@
+import os
+
+from ..src.core.component_interface import IProcessor
+from ..src.prompt_optimization.prompt_optimizer import PromptOptimizer
+from ..src.pipe.storage import StageExecutionData
+from ..utils.schema_info_generation import get_csv_schema
+
+
+BASE_DIR = ""
+DB_DIR = "upload_files"
+TEMPLATE_PATH = "llm_pipe/templates"
+
+class Processor(IProcessor):
+    def __init__(self):
+        """
+        初始化 Processor 类
+        """
+        self._store_variable = {}
+
+    @property
+    def if_store_variable(self) -> bool:
+        """是否在流水线中存储该组件的变量"""
+        return True
+    
+    @property
+    def if_post_process(self) -> bool:
+        """是否启用后处理逻辑"""
+        return False
+    
+    def generate_prompt(self, input_data, data: StageExecutionData):
+        """
+        处理表选择输出，生成列选择提示词
+        """
+        initial_input = data.get_initial_input()
+        
+        # 获取输入数据中的查询文本
+        query = initial_input["nl_queries"]
+        # 获取上阶段选择的表的schema信息]
+        db_name = initial_input["db_name"]
+        table_names = input_data["table_names"]
+        db_path = os.path.join(DB_DIR, db_name)
+        
+        tables_path = []
+        for table in table_names:
+            table_filename = table if table.endswith('.csv') else f"{table}.csv"
+            tables_path.append(os.path.join(db_path, table_filename))
+        schema_info = get_csv_schema(tables_path)
+        self._store_variable["schema_info"] = schema_info
+        # 获取初始hint信息
+        hint = data.get_cache("table_selection")["hint"]
+        # 优化提示词
+        prompt_optimizer = PromptOptimizer(query, 'en')
+        prompt_optimizer.add_template(os.path.join(BASE_DIR, TEMPLATE_PATH, "2_column_selection.tpl"), 
+                                    "QUESTION", 
+                                    "optimized_prompt",
+                                    DATABASE_SCHEMA = schema_info,
+                                    HINT = hint,
+                                    QUESTION = prompt_optimizer.prompt)
+        
+        return prompt_optimizer.optimized_prompt
+    
+    def store_variable_in_pipeline(self):
+        """
+        向流水线暴露需要存储的变量
+        """
+        return self._store_variable
+    
+    def post_process(self, output_data):
+        """
+        对模型响应进行后处理
+        """
+        return output_data
