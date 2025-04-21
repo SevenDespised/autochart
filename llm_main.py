@@ -9,8 +9,9 @@ from llm_pipe.utils.report_process import store_report
 
 BASE_DIR = ""
 DATA_DIR = "data/visEval_dataset/visEval_clear.json"
-CONF_DIR = "llm_pipe/config/hw_deepseek_v3.json"
-CONF_DIR = "llm_pipe/config/config.json"
+#CONF_DIR = "llm_pipe/config/hw_deepseek_v3.json"
+#CONF_DIR = "llm_pipe/config/config.json"
+CONF_DIR = "llm_pipe/config/experiment_70b_pandas_gene.json"
 REPORT_DIR = "llm_pipe/reports"
 if __name__ == "__main__":
     data_path = os.path.join(BASE_DIR, DATA_DIR)
@@ -22,22 +23,26 @@ if __name__ == "__main__":
     with open(config_path, "r") as f:
         config = json.load(f)
     
-    data = extract_key_values(list(json_data.values()), ["nl_queries", "db_id", "hardness"], ["x_data", "y_data", "chart"])
+    data = extract_key_values(
+        list(json_data.values()), 
+        ["nl_queries", "db_id", "describe", "irrelevant_tables", "hardness", "sort"], 
+        ["x_data", "y_data", "chart", "tables", "columns"]
+    )
     data_loader = DataLoader(data, batch_size=1)
 
     num = 1
     n = len(data)
     all_reports = []
     for data in data_loader:
-        #if num > 5000:
-        #    break
-        if data["x_data"]["nl_queries"][0] != "A bar chart listing the number of faults for different description of skills required to fix them, and sort x axis in descending order.":
-            num += 1
-            continue
-        else:
-            print(f"已找到。第{num}个样本")
+        if num > 1:
+           break
+        # if data["x_data"]["nl_queries"][0] != "A bar chart listing the number of faults for different description of skills required to fix them, and sort x axis in descending order.":
+        #     num += 1
+        #     continue
+        # else:
+        #     print(f"已找到。第{num}个样本")
         pipe = PipelineProcessor(config)
-        processor = pipe.processing_chain[1]['processor']
+        #processor = pipe.processing_chain[1]['processor']
         #print(processor.generate_prompt(data["x_data"]))
         report = pipe.execute_pipeline(data["x_data"])
         all_reports.append(report)

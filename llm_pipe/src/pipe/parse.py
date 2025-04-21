@@ -45,6 +45,31 @@ def _clean_response_text(text: str) -> str:
     if text.startswith("\ufeff"):
         text = text[1:]
     
+    # 尝试提取JSON内容（删除JSON前后的额外文本）
+    start_obj = text.find('{')
+    start_arr = text.find('[')
+    
+    if start_obj != -1 or start_arr != -1:
+        # 确定可能的起始位置
+        if start_obj != -1 and (start_arr == -1 or start_obj < start_arr):
+            # JSON对象在前
+            start = start_obj
+            end = text.rfind('}') + 1 if text.rfind('}') != -1 else len(text)
+        else:
+            # JSON数组在前
+            start = start_arr
+            end = text.rfind(']') + 1 if text.rfind(']') != -1 else len(text)
+        
+        if start < end:
+            potential_json = text[start:end]
+            try:
+                # 尝试解析提取的内容
+                json.loads(potential_json, strict=False)
+                text = potential_json  # 如果是有效JSON，则使用提取的内容
+            except json.JSONDecodeError:
+                # 解析失败时保留原文本
+                pass
+    
     # 移除行末逗号（处理不标准JSON）
     text = re.sub(r',(\s*[}\]])', r'\1', text)
     return text.strip()
@@ -52,7 +77,7 @@ def _clean_response_text(text: str) -> str:
 def _safe_json_parse(text: str, result: Dict) -> Optional[Dict]:
     """安全的JSON解析"""
     try:
-        return json.loads(text)
+        return json.loads(text, strict=False)
     except json.JSONDecodeError as e:
         # 尝试容错解析
         repaired = _try_repair_json(text)

@@ -34,3 +34,4 @@ Please respond with a JSON object structured as follows:
 }}
 
 Take a deep breath and think step by step to find the correct pandas code. If you follow all the instructions and generate the correct code, I will give you 1 million dollars.
+Only output a json as your response.
