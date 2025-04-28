@@ -1,13 +1,13 @@
-def extract_key_values(data_list: list, target_x_keys: list, target_y_keys: list):
+def extract_key_values(data: dict, target_x_keys: list, target_y_keys: list):
     """
-    遍历数据集，提取每条数据中的多个 target_x_key 和多个 target_y_key 对应的值
+    遍历字典数据集，提取每个键对应的数据中的多个 target_x_key 和多个 target_y_key 对应的值
 
-    :param data_list: 包含多条数据的列表，每条数据是一个嵌套字典或列表
+    :param data: 包含多个键值对的字典，每个值可能是一个嵌套字典或列表
     :param target_x_keys: 需要提取的多个 x 键的列表
     :param target_y_keys: 需要提取的多个 y 键的列表
-    :return: 包含所有有效数据对的字典列表，每个字典包含 x_data 和 y_data 键
+    :return: 字典，键为原始字典的键，值为包含 x_data 和 y_data 键的字典
     """
-    extracted_res = []
+    extracted_res = {}
 
     def find_key_values(data_item):
         """
@@ -39,7 +39,10 @@ def extract_key_values(data_list: list, target_x_keys: list, target_y_keys: list
         traverse_nested_structure(data_item)
         return {'x_data': x_values, 'y_data': y_values}
 
-    extracted_res = [find_key_values(item) for item in data_list]
+    # 遍历字典的每个键值对，应用find_key_values函数
+    for key, value in data.items():
+        extracted_res[key] = find_key_values(value)
+    
     return extracted_res
 
 def get_db_tables_path(path, file_name, db_id) -> list:

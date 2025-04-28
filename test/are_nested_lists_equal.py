@@ -1,33 +1,3 @@
-import json
-import pandas as pd
-
-def merge_data(x_data, y_data, classify):
-    """
-    将x_data、y_data和classify合并成一个DataFrame
-    
-    参数:
-    x_data -- 包含单位的列表的列表，例如：[["MW", "PW", "TW"]]
-    y_data -- 包含值的列表的列表，例如：[[0, 3, 0], [1, 2, 2], [4, 2, 1]]
-    classify -- 类别列表，例如：["Electrical", "Mechanical", "TV, Video"]
-    
-    返回:
-    包含单位、值和类别的DataFrame
-    """
-    # 创建空列表存储结果
-    res = [[], [], []]
-    units = res[0]
-    values = res[1]
-    categories = res[2]
-    
-    # 处理数据
-    for category_index, category in enumerate(classify):
-        for unit_index, unit in enumerate(x_data[0]):
-            units.append(unit)
-            values.append(y_data[category_index][unit_index])
-            categories.append(category)
-
-    return res
-
 def are_nested_lists_equal(nested_list1, nested_list2, consider_order=False):
     """
     判断两个列表列表是否相等
@@ -158,6 +128,7 @@ def are_nested_lists_equal(nested_list1, nested_list2, consider_order=False):
         if month1 is not None and month2 is not None:
             return month1 == month2
         return False
+        
 
 
     def are_lists_equal(list1, list2, consider_order=False):
@@ -220,63 +191,7 @@ def are_nested_lists_equal(nested_list1, nested_list2, consider_order=False):
             return False
     return True
 
-res_dir = "experiment_res/auseful_result/607bevaluation_report.json"
-data_dir = "data/visEval_dataset/visEval_clear.json"
-with open(res_dir, "r", encoding="utf-8") as f:
-    data = json.load(f)
-with open(data_dir, "r", encoding="utf-8") as f:
-    dataset = json.load(f)
 
-res = data["results"]
-c2r_count = 0
-r2c_count = 0
-
-for i in range(len(res)):
-    try:
-        if i + 1 == 101:
-            print("")
-        data_id = res[i]["data_id"]
-        eva = res[i]["evaluation"]["final"]
-        nl_query = res[i]["input"]["nl_queries"][0]
-        sort = False if res[i]["input"]["sort"] is None else True
-        sort = False
-        expected = eva["expected"]
-        predicted = eva["predicted"]
-        if not eva["correct"]:
-            if are_nested_lists_equal(expected, predicted, sort):
-                c2r_count += 1
-                print(f"案例 {i+1} 预测正确，但被标记为错误")
-                data["results"][i]["evaluation"]["final"]["correct"] = True
-            else:
-                if dataset[data_id]["vis_obj"]["classify"]:
-                    x = dataset[data_id]["vis_obj"]["x_data"]
-                    y = dataset[data_id]["vis_obj"]["y_data"]
-                    classify = dataset[data_id]["vis_obj"]["classify"]
-                    merged_data = merge_data(x, y, classify)
-                    if are_nested_lists_equal(merged_data, predicted, sort):
-                        print(f"案例 {i+1} 预测正确，但因嵌套被标记为错误")
-                        data["results"][i]["evaluation"]["final"]["correct"] = True
-
-        else:
-            if not are_nested_lists_equal(expected, predicted, sort):
-                r2c_count += 1
-                print(f"案例 {i+1} 预测错误，但被标记为正确")
-                data["results"][i]["evaluation"]["final"]["correct"] = False
-                print(f"案例 {i+1} 的输入: {nl_query}")
-                print(f"案例 {i+1} 的预期: {expected}")
-                print(f"案例 {i+1} 的预测: {predicted}")
-    except Exception as e:
-        print(f"处理案例 {i+1} 时发生错误: {e}")
-
-print(f"标记为错误但实际正确的案例: {c2r_count} 个")
-print(f"标记为正确但实际错误的案例: {r2c_count} 个")
-
-# 重新统计
-correct_case = sum(1 for res_item in res if res_item.get("evaluation", {}).get("final", {}).get("correct", False))
-data["evaluation"]["final"]["correct_cases"] = correct_case
-data["evaluation"]["final"]["accuracy"] = correct_case / data["total_cases"]
-data["correct_cases"] = correct_case
-data["accuracy"] = correct_case / data["total_cases"]
-
-with open(res_dir.replace(".json", "_reeval.json"), "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
+a = [['Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat', 'Sun'], [2, 1, 1, 1, 1, 1, 0]]
+b = [['Monday', 'Thursday', 'Tuesday', 'Wednesday', 'Saturday', 'Friday'], [2, 1, 1, 1, 1, 1]]
+print(are_nested_lists_equal(a, b, consider_order=False))  # True

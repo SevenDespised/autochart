@@ -23,8 +23,8 @@ LIMIT = -1
 BASE_DIR = ""
 DATA_DIR = "data/visEval_dataset/visEval_with_tables_columns.json"
 #DATA_DIR = "data/visEval_dataset/visEval.json"
-#CONF_DIR = "llm_pipe/config/experiment_ds_pandas_gene.json"
-CONF_DIR = "llm_pipe/config/experiment_405b_pandas_gene.json"
+CONF_DIR = "llm_pipe/config/experiment_ds_pandas_gene.json"
+#CONF_DIR = "llm_pipe/config/experiment_405b_pandas_gene.json"
 REPORT_DIR = "experiment_res/evaluation_report.json"
 EXPERIMENT_DIR = "experiment_res/"
 
@@ -50,8 +50,8 @@ def main():
     
     # 提取数据
     data = extract_key_values(
-        list(json_data.values()), 
-        ["nl_queries", "db_id", "describe", "irrelevant_tables", "hardness", "sort"], 
+        json_data, 
+        ["nl_queries", "db_id", "describe", "irrelevant_tables", "hardness", "sort", "classify"], 
         ["x_data", "y_data", "chart", "tables", "columns"]
     )
     
@@ -59,12 +59,13 @@ def main():
     test_cases = []
     limit = LIMIT
     
-    for i, item in enumerate(data):
+    for i, (k, item) in enumerate(data.items()):
         if i >= limit and limit >= 0:
             break
             
         # 构建测试用例
         test_case = {
+            'id': k,
             'input': item["x_data"],
             'expected_output': item["y_data"]
         }

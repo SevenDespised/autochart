@@ -1,7 +1,7 @@
 import json
 import os
 
-res_dir = "experiment_res/useful_result/600bevaluation_report_reeval.json"
+res_dir = "experiment_res/useful_result/600bevaluation_report.json"
 with open(res_dir, "r", encoding="utf-8") as f:
     data = json.load(f)
 

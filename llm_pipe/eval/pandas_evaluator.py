@@ -69,6 +69,7 @@ class Evaluator:
         total_tokens = 0
         n = len(test_cases)
         for i, test_case in enumerate(test_cases):
+            data_id = test_case['id']
             try:
                 print(f"[BATCH:{batch_num}][{i + 1}/{n}] 正在评估测试用例...")
                 input_data = test_case['input']
@@ -112,6 +113,7 @@ class Evaluator:
                 total_tokens += tokens_used
                 if pipeline_report["success"]:
                     result = {
+                        'data_id': data_id,
                         'status': 'success',
                         'test_case_id': i,
                         'input': input_data,
@@ -137,8 +139,10 @@ class Evaluator:
                     }
                 else:
                     result = {
+                        'data_id': data_id,
                         'status': 'failure',
                         'test_case_id': i,
+                        'input': input_data,
                         'evaluation': {
                             "final":{
                                 'expected': final_expected_output,
@@ -161,8 +165,10 @@ class Evaluator:
             except Exception as e:
                 print(f"[BATCH:{batch_num}] 处理测试用例 {i} 时发生错误: {e}")
                 result = {
+                    'data_id': data_id,
                     'status': 'error',
                     'test_case_id': i,
+                    'input': test_case['input'],
                     'error_message': str(e),
                 }
                 self.results.append(result)
@@ -292,7 +298,7 @@ class Evaluator:
         # 提取字典的值列表
         predicted_output = list(predicted_output_dict.values())
 
-        is_sorted = False if not input_data["sort"] else True
+        is_sorted = False if input_data["sort"] is None else True
         # 评估结果
         is_correct = self.are_nested_lists_equal(final_expected_output, predicted_output, is_sorted)
         # 评估阶段结果

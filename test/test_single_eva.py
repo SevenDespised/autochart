@@ -52,7 +52,7 @@ def main():
     # 准备测试用例
     
     for i, item in enumerate(data):
-        if item["x_data"]["nl_queries"][0] == "How many dogs departed in each day? Visualize with a bar chart that groups by departed date.":
+        if item["x_data"]["nl_queries"][0] == "What is the average rating of songs for each language Plot them as bar chart, and could you list from high to low by the total number?":
             print("find it")
                 
             # 构建测试用例
