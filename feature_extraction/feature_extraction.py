@@ -196,7 +196,7 @@ df_f = pd.read_csv(base_dir + f"features/field_level_features_df.csv")
 df_o_dedup = df_o.drop_duplicates('field_id')
 df_f_dedup = df_f.drop_duplicates('field_id')
 
-df_o_dedup_clean = df_o_dedup[df_o_dedup['trace_type']                              .isin(['bar', 'box', 'heatmap', 'histogram', 'line', 'scatter'])]
+df_o_dedup_clean = df_o_dedup[df_o_dedup['trace_type'].isin(['bar', 'box', 'heatmap', 'histogram', 'line', 'scatter'])]
 df_f_dedup_clean = df_f_dedup[df_f_dedup['exists']!='exists']
 
 df_all = df_o_dedup_clean[['field_id', 'fid', 'trace_type', 'is_xsrc', 'is_ysrc']].merge(df_f_dedup_clean, on=['field_id', 'fid'])

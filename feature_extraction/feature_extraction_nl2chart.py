@@ -110,10 +110,10 @@ if not os.path.exists(features_dir_name):
 
     
 start_time = time()
-res = extract_features(data, 100)
+#res = extract_features(data, 100)
 
 print('Total time: {:.2f}s'.format(time() - start_time))
-write_batch_results(res, features_dir_name = features_dir_name, write_header = True)
+#write_batch_results(res, features_dir_name = features_dir_name, write_header = True)
 
 # In[7]:
 
@@ -133,6 +133,7 @@ def get_chart_type(fid):
     return data[fid]['chart']
 
 df_f_dedup_clean['trace_type'] = df_f_dedup_clean['fid'].apply(get_chart_type)
+df_f_dedup_clean.to_csv((base_dir + f"features/fix_nl2chart_feature.csv"), index=False)
 list_dataset_split = train_test_split(df_f_dedup_clean, train_size=0.7, test_size=0.3)
 df_train, df_test    = list_dataset_split[0], list_dataset_split[1]
 
